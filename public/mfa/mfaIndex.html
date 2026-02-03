@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User Verification</title>
+
+    <!-- Poppins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="mfaStyles.css" />
+  </head>
+
+  <body>
+    <main class="page">
+      <!-- Outer frame -->
+      <section class="frame" aria-label="User Verification">
+        <div class="panel">
+          <h1 class="title">User Verification</h1>
+
+          <!-- Request Code -->
+          <div class="row">
+            <form class="row-form" action="/reqOTP" method="post">
+              <input
+                type="email"
+                id="emailInput"
+                name="email"
+                class="pill-input"
+                placeholder="example@example.com"
+                required
+                autocomplete="email"
+              />
+              <button type="submit" class="pill-btn">Request Code</button>
+            </form>
+          </div>
+
+          <!-- Row 2: Confirm -->
+          <div class="row">
+            <form class="row-form" action="/verifyOTP" method="post">
+              <input type="hidden" id="verifyEmail" name="email" value="" />
+
+              <input
+                type="text"
+                id="codeInput"
+                name="otp"
+                class="pill-input"
+                placeholder="Enter the Code"
+                required
+                inputmode="numeric"
+                autocomplete="one-time-code"
+              />
+
+              <button type="submit" class="pill-btn">Confirm</button>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      
+      // Keep the email in sync so verifyOTP receives the same email
+      const emailInput = document.getElementById("emailInput");
+      const verifyEmail = document.getElementById("verifyEmail");
+
+      emailInput.addEventListener("input", (e) => {
+        verifyEmail.value = e.target.value;
+      });
+
+      // Also set it once on load (in case browser autofills)
+      verifyEmail.value = emailInput.value || "";
+    </script>
+  </body>
+</html>
