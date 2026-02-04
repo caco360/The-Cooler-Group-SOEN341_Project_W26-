@@ -1,0 +1,13 @@
+Light Mode:
+- Primary: #74C682 (main)
+- Secondary Colour: #D9D9D9 (background)
+- Accent Colour: #E9725E 
+- Light Neutral: #F7F7F7 (text on dark surface)
+- Dark Neutral: #101010 (text on bright surface)
+
+Dark Mode:
+- Primary Variant: #37623E (main)
+- Secondary Colour: #262626 (background)
+- Accent Variant: #813A20
+- Light Neutral: #F7F7F7 (text on dark surface)
+- Dark Neutral: #101010 (text on bright surface)
