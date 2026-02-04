@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Delete Account</title>
+  <link rel="stylesheet" href="authentication.css" />
+</head>
+
+<body>
+  <div class="container">
+    <div class="login-box">
+      <img src="/public/images/MealMajor-logo.png" width="100" />
+      <p>&nbsp;</p>
+      <h2>Delete Account</h2>
+
+      <form id="deleteForm">
+        <div class="input-group">
+            <label for="username" style="float: left;">Username</label>
+            <input type="text" id="username" required />
+        </div>
+
+        <div class="input-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" required />
+        </div>
+
+        <p id="deleteError" style="color:red; font-size:14px; min-height:18px;"></p>
+
+        <button type="submit">Delete</button>
+        <p>&nbsp;</p>
+        <p class="signup">Don’t have an account? <a href="register.html">Sign Up</a></p>
+        <p class="passrest"><a href="forgot.html">Forgot password?</a></p>
+      </form>
+    </div>
+  </div>
+
+  <div id="confirmModal" class="modal-overlay">
+    <div class="modal-box">
+      <h3>Are you sure?</h3>
+      <p>This will permanently delete your account. This action cannot be undone.</p>
+      <div class="modal-buttons">
+        <button id="confirmDeleteBtn" class="btn-danger" type="button">Yes, delete</button>
+        <button id="cancelDeleteBtn" class="btn-secondary" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="delete.js"></script>
+</body>
+</html>
+</html>

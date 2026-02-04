@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Forgot Password</title>
+  <link rel="stylesheet" href="authentication.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="login-box">
+      <img src="/public/images/MealMajor-logo.png" width="100">
+      <p>&nbsp;</p>
+      <h2>Forgot Password</h2>
+
+      <form id="forgotForm">
+        <div class="input-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" required />
+        </div>
+
+        <div class="input-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" required />
+        </div>
+
+        <div class="input-group">
+            <label for="newPassword">New Password</label>
+            <input type="password" id="newPassword" required />
+        </div>
+
+        <div class="input-group">
+            <label for="confirmPassword">Confirm New Password</label>
+            <input type="password" id="confirmPassword" required />
+        </div>
+        <p id="forgotError" style="color:red; font-size:14px; min-height:18px;"></p>
+        <p id="forgotSuccess" style="color:green; font-size:14px; min-height:18px;"></p>
+        <button type="submit">Reset Password</button>
+        <p>&nbsp;</p>
+        <p class="signup">Don’t have an account? <a href="register.html">Sign Up</a></p>
+        <p class="passrest">Go back to <a href="login.html">Sign In</a> page</p>
+      </form>
+    </div>
+  </div>
+
+  <script src="forgot.js"></script>
+</body>
+</html>
