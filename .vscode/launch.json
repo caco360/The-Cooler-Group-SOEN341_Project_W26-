@@ -8,7 +8,7 @@
             "type": "chrome",
             "request": "launch",
             "name": "Launch Chrome against localhost",
-            "url": "http://localhost:3000/mfa/",
+            "url": "http://localhost:3000/verify/",
             "webRoot": "${workspaceFolder}"
         }
     ]
