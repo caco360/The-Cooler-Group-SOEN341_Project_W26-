@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User Verification</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <section class="frame">
+        <div class="panel">
+          <h1 class="title">User Verification</h1>
+
+          <div class="row">
+            <form class="row-form" onsubmit="event.preventDefault(); requestOTP();">
+              <input type="email" id="emailInput" class="pill-input" placeholder="example@example.com" required />
+              <button type="submit" class="pill-btn">Request Code</button>
+            </form>
+          </div>
+
+          <div class="row">
+            <form class="row-form" onsubmit="event.preventDefault(); verifyOTP();">
+              <input type="text" id="codeInput" class="pill-input" placeholder="Enter the Code" required />
+              <button type="submit" class="pill-btn">Confirm</button>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      /**
+       * BACKEND CONFIGURATION
+       * Using direct IP (127.0.0.1) instead of 'localhost' ensures compatibility 
+       * across different operating systems, particularly Mac.
+       */
+      const API_URL = 'http://127.0.0.1:3000';
+
+      /**
+       * Function to send the user's email to the backend.
+       * The backend will generate an OTP and email it to the user.
+       */
+      async function requestOTP() {
+        const email = document.getElementById('emailInput').value;
+        try {
+          const res = await fetch(`${API_URL}/reqOTP`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+          });
+          const data = await res.json();
+          // Alert user based on the 'ok' status from the server
+          alert(data.ok ? "✅ " + data.msg : "❌ " + data.error);
+        } catch (err) {
+          alert("❌ Connection Error. Is the server running at " + API_URL + "?");
+        }
+      }
+
+      /**
+       * Function to send the email and the user-entered code to the backend.
+       * The backend checks if the code is correct and hasn't expired.
+       */
+      async function verifyOTP() {
+        const email = document.getElementById('emailInput').value;
+        const otp = document.getElementById('codeInput').value;
+        try {
+          const res = await fetch(`${API_URL}/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, otp })
+          });
+          const data = await res.json();
+          // Final verification success/failure message
+          alert(data.ok ? "🎉 Verified! 🥗" : "❌ " + data.error);
+        } catch (err) {
+          alert("❌ Connection Error.");
+        }
+      }
+    </script>
+  </body>
+</html>

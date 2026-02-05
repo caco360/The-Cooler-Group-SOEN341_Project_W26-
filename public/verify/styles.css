@@ -28,7 +28,7 @@ body {
 .frame {
   position: relative;
   width: min(900px, 92vw);
-  border: 4px solid var(--black);
+  border: 1px solid var(--black);
   border-radius: 46px;
   background: var(--white);
   padding: 22px;

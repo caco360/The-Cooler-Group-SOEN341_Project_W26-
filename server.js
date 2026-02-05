@@ -1,87 +1,80 @@
-const express = require('express');
-const nodemailer = require('nodemailer');
-const bodyParser = require('body-parser');
-const randomstring = require('randomstring');
-const path = require('path');
+const express = require("express");
+const nodemailer = require("nodemailer");
+const bodyParser = require("body-parser");
+const randomstring = require("randomstring");
+const path = require("path");
+const cors = require("cors");
+
 const app = express();
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 
+const PORT = process.env.PORT || 3000;
 
-
-
-app.use(express.static(path.join(__dirname, 'public'))); // Middleware to parse JSON and URL-encoded data
+// Middleware
+app.use(cors()); 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, "public")));
 
-// Store generated OTPs and corresponding email addresses
-const otpCache = {};
+// OTP Store (In-memory)
+const otpCache = {}; 
 
-// Generate OTP
-function generateOTP() {
-    return randomstring.generate({ length : 4, charset: 'numeric' });
+// Transporter using Gmail Service
+function makeTransporter() {
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS, // MUST BE 16-CHARACTER APP PASSWORD
+    },
+  });
 }
 
-// Send OTP via email
-async function sendOTPEmail(email, otp) {
-    const mailOptions = {
-        from: 'jerrish.github@gmail.com',
-        to: email,
-        subject: 'Your OTP Code',
-        text: `Your OTP code is: ${otp}`  
-    };
+// HEALTH CHECK (Test this first at http://localhost:3000/health)
+app.get("/health", (req, res) => res.json({ ok: true, msg: "Server is alive" }));
 
-    let transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: 'jerrish.github@gmail.com',
-            pass: 'your-email-password'
-        },
-        tls: {
-            rejectUnauthorized: false // Disable certificate validation
-        }
-            
+// Route: Request OTP
+app.post("/reqOTP", async (req, res) => {
+  const { email } = req.body;
+  console.log("📩 OTP Request received for:", email);
+
+  if (!email) return res.status(400).json({ ok: false, error: "Email is required" });
+
+  const otp = randomstring.generate({ length: 4, charset: "numeric" });
+  otpCache[email] = { otp, expiresAt: Date.now() + 5 * 60 * 1000 };
+
+  try {
+    const transporter = makeTransporter();
+    await transporter.sendMail({
+      from: `"MealMajor" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "Your OTP Code",
+      text: `Your verification code is: ${otp}`,
     });
 
-    transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-            console.log('Error sending email:', error);
-        } else {
-            console.log('Email sent:', info.response);
-        }
-    });
-}
-
-// route to request OTP
-app.post('/reqOTP', (req, res)=> {
-    const { email } = req.body;
-    const otp = generateOTP();
-    otpCache[email] = otp; // Store OTP against the email
-    
-    // Send OTP by email
-    sendOTPEmail(email, otp);
-    res.cookie('otpCache', otpCache, {maxAge: 30000, httpOnly: true});
-    res.status(200).json({ message: 'OTP sent successfully'});
+    console.log(`✅ OTP ${otp} sent to ${email}`);
+    res.json({ ok: true, msg: "OTP sent successfully!" });
+  } catch (err) {
+    console.error("❌ SMTP Error:", err.message);
+    res.status(500).json({ ok: false, error: "Email failed: " + err.message });
+  }
 });
 
-// route to verify OTP
-app.post('/verifyOTP', (req, res) => {
-    const { email, otp } = req.body;
-    
-    //check if email exists in the cache
-    if (!otpCache.hasOwnProperty(email)) {
-        return res.status(400).json({ message: 'Email not found' });
-    }
+// Route: Verify OTP
+app.post("/verify", (req, res) => {
+  const { email, otp } = req.body;
+  const record = otpCache[email];
 
-    // Check if OTP matches teh one stored in the cache
-    if (otpCache[email] === otp.trim()){
-        // Remove OTP from cache after successful verification
-        delete otpCache[email];
-        return res.status(200).json({ message: 'OTP verified successfully' });
-    } else
-        return res.status(400).json({ message: 'Invalid OTP' });
+  if (!record) return res.status(400).json({ ok: false, error: "No OTP found" });
+  if (Date.now() > record.expiresAt) return res.status(400).json({ ok: false, error: "OTP expired" });
+  if (String(otp) !== String(record.otp)) return res.status(400).json({ ok: false, error: "Invalid OTP" });
+
+  delete otpCache[email];
+  res.json({ ok: true, msg: "Verified successfully!" });
 });
 
-// Start the server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Website is running on port ${PORT}`);
+// Start Server on 0.0.0.0 to fix Mac connection issues
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 SERVER IS LIVE!`);
+  console.log(`🔗 Local Test: http://127.0.0.1:${PORT}/health`);
 });
