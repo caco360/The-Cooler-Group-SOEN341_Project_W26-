@@ -2,7 +2,16 @@ console.log("profile.js loaded ✅");
 
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("saveBtn").addEventListener("click", save);
+
+  document
+    .getElementById("addAllergyBtn")
+    .addEventListener("click", addAllergy);
+
+  document
+    .getElementById("addDietBtn")
+    .addEventListener("click", addDiet);
   load();
+
 });
 
 async function load() {
@@ -105,4 +114,68 @@ async function save() {
   const data = await r.json();
 
   msg.textContent = data.ok ? "Saved ✅" : "Error ❌";
+}
+
+
+async function addAllergy() {
+
+  const input = document.getElementById("newAllergy");
+  const name = input.value.trim();
+
+  if (!name) return;
+
+  const res = await fetch("/api/add-option", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      type: "allergy",
+      name
+    })
+  });
+
+  const data = await res.json();
+
+  if (!data.ok) {
+    alert(data.message || "Failed to add allergy");
+    return;
+  }
+
+  input.value = "";
+
+  // Reload list
+  load();
+}
+
+
+// =======================
+// Add New Diet
+// =======================
+
+async function addDiet() {
+
+  const input = document.getElementById("newDiet");
+  const name = input.value.trim();
+
+  if (!name) return;
+
+  const res = await fetch("/api/add-option", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      type: "diet",
+      name
+    })
+  });
+
+  const data = await res.json();
+
+  if (!data.ok) {
+    alert(data.message || "Failed to add diet");
+    return;
+  }
+
+  input.value = "";
+
+  // Reload list
+  load();
 }

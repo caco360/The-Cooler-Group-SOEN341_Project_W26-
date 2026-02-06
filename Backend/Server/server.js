@@ -150,6 +150,104 @@ app.get("/me", (req, res) => {
   });
 });
 
+// ===============================
+// Add Allergy or Diet Option
+// ===============================
+app.post("/api/add-option", async (req, res) => {
+
+  const userId = req.session.userId;
+
+  if (!userId) {
+    return res.status(401).json({
+      ok: false,
+      message: "Not logged in"
+    });
+  }
+
+  let { type, name } = req.body;
+
+  if (!type || !name) {
+    return res.status(400).json({
+      ok: false,
+      message: "Missing type or name"
+    });
+  }
+
+  type = type.trim().toLowerCase();
+  name = name.trim();
+
+  let table;
+
+  if (type === "allergy") {
+    table = "allergies";
+  } else if (type === "diet") {
+    table = "diet_preferences";
+  } else {
+    return res.status(400).json({
+      ok: false,
+      message: "Invalid type"
+    });
+  }
+
+  try {
+
+    // Check if already exists
+    const { data: existing, error: e1 } = await supabase
+      .from(table)
+      .select("id")
+      .ilike("name", name)
+      .maybeSingle();
+
+    if (e1) {
+      console.error(e1);
+      return res.status(500).json({
+        ok: false,
+        message: "Server error"
+      });
+    }
+
+    // If exists → return it
+    if (existing) {
+      return res.json({
+        ok: true,
+        id: existing.id,
+        existed: true
+      });
+    }
+
+    // Insert new
+    const { data: inserted, error: e2 } = await supabase
+      .from(table)
+      .insert([{ name }])
+      .select("id")
+      .single();
+
+    if (e2) {
+      console.error(e2);
+      return res.status(500).json({
+        ok: false,
+        message: "Insert failed"
+      });
+    }
+
+    return res.json({
+      ok: true,
+      id: inserted.id,
+      existed: false
+    });
+
+  } catch (err) {
+
+    console.error("ADD OPTION ERROR:", err);
+
+    return res.status(500).json({
+      ok: false,
+      message: "Server error"
+    });
+  }
+});
+
+
 app.get("/profile-data", async (req,res)=>{
   const userId = req.session.userId;
   if (!userId) {
