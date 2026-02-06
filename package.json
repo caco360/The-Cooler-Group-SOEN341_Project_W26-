@@ -1,30 +1,12 @@
 {
-  "name": "the-cooler-group-soen341_project_w26-",
-  "version": "1.0.0",
-  "description": "Besher AlSabbagh 40313611 Jean-Claude Chiniara 40247594 Carl Abou Nasr 40279011 Nicholas Chamoun 40264135 Valeria Cozonac 40283250 Jerrish Pathmanathan 40317944",
-  "main": "server.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/caco360/The-Cooler-Group-SOEN341_Project_W26-.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/caco360/The-Cooler-Group-SOEN341_Project_W26-/issues"
-  },
-  "homepage": "https://github.com/caco360/The-Cooler-Group-SOEN341_Project_W26-#readme",
   "dependencies": {
-    "body-parser": "^2.2.2",
-    "cors": "^2.8.6",
+    "@supabase/supabase-js": "^2.93.3",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
-    "nodemailer": "^7.0.13",
-    "randomstring": "^1.3.1"
+    "express-session": "^1.19.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node Backend/Server/server.js"
   }
 }

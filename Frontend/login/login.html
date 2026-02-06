@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="page">
+    <section class="card" aria-label="Login form">
+      <header class="card__header">
+        <h1>Welcome back</h1>
+        <p>Sign in to continue</p>
+      </header>
+
+      <form class="form" id="loginForm" action="#">
+
+        <label class="field">
+          <span class="field__label">Username</span>
+          <input
+            class="field__input"
+            type="text"
+            name="username"
+            autocomplete="username"
+            required
+          />
+        </label>
+
+        <label class="field">
+          <span class="field__label">Password</span>
+          <input
+            class="field__input"
+            type="password"
+            name="password"
+            autocomplete="current-password"
+            required
+          />
+        </label>
+
+        <button class="btn" type="submit">Sign in</button>
+
+        <p class="footer">
+          Don’t have an account?
+          <a class="link" href="#">Create one</a>
+        </p>
+
+        <p id="message"></p>
+
+      </form>
+    </section>
+  </main>
+
+
+<script>
+  const form = document.getElementById("loginForm");
+  const message = document.getElementById("message");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault(); // Stop page reload
+
+    // Get input values
+    const username = form.username.value.trim();
+    const password = form.password.value;
+
+    // Reset message
+    message.textContent = "";
+    message.style.color = "#fca5a5";
+
+    try {
+      // Send data to server
+      const response = await fetch("/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          username: username,
+          password: password
+        })
+      });
+
+      const data = await response.json();
+
+      // If login failed
+      if (!data.ok) {
+        message.textContent = data.message;
+        return;
+      }
+
+      // If login success → redirect
+      window.location.href = data.redirectTo;
+
+    } catch (err) {
+      message.textContent = "Network error. Try again.";
+    }
+  });
+</script>
+
+
+</body>
+</html>
