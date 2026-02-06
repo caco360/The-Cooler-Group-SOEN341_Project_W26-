@@ -72,7 +72,73 @@ app.post("/login", async (req, res) => {
   });
 });
 
+app.post("/register", async (req, res) => {
+  let { username, password, confirmPassword } = req.body;
 
+  username = username.trim();
+  password = password.trim();
+  confirmPassword = confirmPassword.trim();
+
+  if (!username || !password || !confirmPassword) {
+    return res.status(400).json({
+      ok: false,
+      message: "All fields are required"
+    });
+  }
+
+  // Check passwords match 
+  if (password !== confirmPassword) {
+    return res.status(400).json({
+      ok: false,
+      message: "Passwords do not match"
+    });
+  }
+
+  // Check if username exists
+  const { data: existingUser, error: e1 } = await supabase
+    .from("User")
+    .select("id")
+    .eq("username", username)
+    .maybeSingle();
+
+  if (e1) {
+    console.error(e1);
+    return res.status(500).json({
+      ok: false,
+      message: "Server error"
+    });
+  }
+
+  if (existingUser) {
+    return res.status(409).json({
+      ok: false,
+      message: "Username already exists"
+    });
+  }
+
+  // Create user
+  const { error: e2 } = await supabase
+    .from("User")
+    .insert([
+      { username, password }
+    ]);
+
+  if (e2) {
+  console.error("REGISTER ERROR:", e2);
+
+  return res.status(500).json({
+    ok: false,
+    message: e2.message
+  });
+}
+
+
+  return res.json({
+    ok: true,
+    message: "Account created"
+  });
+
+});
 
 app.get("/me", (req, res) => {
   if (!req.session.userId) {
