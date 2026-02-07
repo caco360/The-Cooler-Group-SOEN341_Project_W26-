@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="User profile page for our application." />
+  <title>Profile</title>
+  <link rel="stylesheet" href="../login/authentication.css" />
+</head>
+<body>
+  <main>
+
+  <h1 id="welcome">Loading...</h1>
+
+  <h3>Allergies</h3>
+
+<!-- Add Allergy -->
+<div class="input-group">
+  <input
+    type="text"
+    id="newAllergy"
+    placeholder="Add new allergy"
+  />
+  <button id="addAllergyBtn">Add</button>
+</div>
+
+<div id="allergiesBox"></div>
+
+
+<h3>Diet Preferences</h3>
+
+<!-- Add Diet -->
+<div class="input-group">
+  <input
+    type="text"
+    id="newDiet"
+    placeholder="Add new preference"
+  />
+  <button id="addDietBtn">Add</button>
+</div>
+
+<div id="dietsBox"></div>
+
+
+  <br>
+
+  <button id="saveBtn">Save</button>
+
+  <p id="msg"></p>
+
+</main>
+
+
+
+  <script src="profile.js"></script>
+
+
+</body>
+</html>
