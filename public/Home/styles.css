@@ -9,7 +9,6 @@ body {
     min-height: 100vh;
     background: linear-gradient(135deg, #D4A628 0%, #E6B82E 50%, #D4A628 100%);
     background-attachment: fixed;
-    background-position: fixed;
     background-size: cover;
 }
 
@@ -69,6 +68,7 @@ body {
     justify-content: space-between;
     padding: 0 4rem;
     gap: 4rem;
+
 }
 
 .text-section {
@@ -103,6 +103,7 @@ body {
     filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.2));
     transition: transform 0.5s ease;
     animation: float 6s ease-in-out infinite;
+
 }
 
 .salad-image:hover {
@@ -124,6 +125,10 @@ body {
     gap: 2rem;
 }
 
+.middle-section:hover {
+    box-shadow: #d46d28 0px 30px 40px 40px;
+    transition: all 0.3s ease;
+}
 .fleur-image {
     height: 85%;
     width: auto;
@@ -170,7 +175,7 @@ body {
      animation: fadeInUp 1s ease-out 0.9s both;
 }
 .bottom-section:hover{
-    box-shadow: #D4A628 0px 5px 20px;
+    box-shadow:inset #D4A628 0px 20px 40px -5px;
   transition: all 0.3s ease;
 }
 
@@ -316,7 +321,7 @@ body {
     
     .salad-image {
         max-height: 400px;
-        padding-right: 20rem;
+        padding-right: 60rem;
     }
 }
 
