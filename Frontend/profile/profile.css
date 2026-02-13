@@ -1,0 +1,210 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: "Inter", sans-serif;
+}
+
+
+/* Layout */
+
+body {
+  min-height: 100vh;
+  background: #f9f7f3;
+}
+
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+
+/* Sidebar */
+
+.sidebar {
+  width: 220px;
+  background: #1c1c1c;
+  color: white;
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.logo {
+  font-size: 22px;
+  font-weight: 600;
+  color: #f3b83e;
+  margin-bottom: 40px;
+}
+
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.sidebar a {
+  text-decoration: none;
+  color: #ddd;
+  padding: 10px 12px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.sidebar a:hover {
+  background: rgba(243,184,62,0.15);
+  color: #f3b83e;
+}
+
+.sidebar a.active {
+  background: #f3b83e;
+  color: #1c1c1c;
+  font-weight: 600;
+}
+
+
+/* Main */
+
+.main-content {
+  flex: 1;
+  padding: 40px 60px;
+  background: #f9f7f3;
+}
+
+
+/* Header */
+
+header {
+  margin-bottom: 35px;
+}
+
+header h1 {
+  font-size: 26px;
+  color: #1c1c1c;
+}
+
+header p {
+  color: #91380c;
+  font-size: 14px;
+}
+
+
+/* Sections */
+
+section {
+  background: white;
+  border-radius: 14px;
+  padding: 25px;
+  margin-bottom: 30px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.06);
+}
+
+section h2 {
+  font-size: 16px;
+  margin-bottom: 15px;
+  color: #91380c;
+}
+
+
+/* Input */
+
+.input-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.input-row input {
+  flex: 1;
+  padding: 12px;
+  border-radius: 9px;
+  border: 1px solid #ddd;
+  background: #fafafa;
+}
+
+.input-row input:focus {
+  outline: none;
+  border-color: #f3b83e;
+  background: white;
+}
+
+.input-row button {
+  background: #91380c;
+  color: white;
+  border: none;
+  padding: 12px 18px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.input-row button:hover {
+  background: #7a2f09;
+}
+
+
+/* Pills */
+
+.pill-box {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pill-box label {
+  position: relative;
+}
+
+.pill-box input {
+  display: none;
+}
+
+.pill-box span {
+  display: inline-block;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: #eee;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pill-box span:hover {
+  background: #f3b83e55;
+}
+
+.pill-box input:checked + span {
+  background: #f3b83e;
+  color: #1c1c1c;
+  font-weight: 500;
+}
+
+
+/* Footer */
+
+footer {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+#saveBtn {
+  background: linear-gradient(135deg,#f3b83e,#91380c);
+  color: #1c1c1c;
+  border: none;
+  padding: 13px 26px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.25s;
+}
+
+#saveBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+}
+
+#msg {
+  font-size: 14px;
+  color: #91380c;
+}

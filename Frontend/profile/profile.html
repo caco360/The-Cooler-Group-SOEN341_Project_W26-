@@ -1,59 +1,87 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="User profile page for our application." />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>Profile</title>
-  <link rel="stylesheet" href="../login/authentication.css" />
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="profile.css">
 </head>
+
 <body>
-  <main>
 
-  <h1 id="welcome">Loading...</h1>
+<div class="app-layout">
 
-  <h3>Allergies</h3>
+  <!-- Sidebar -->
+  <aside class="sidebar">
 
-<!-- Add Allergy -->
-<div class="input-group">
-  <input
-    type="text"
-    id="newAllergy"
-    placeholder="Add new allergy"
-  />
-  <button id="addAllergyBtn">Add</button>
+    <h2 class="logo">Meal Major</h2>
+
+    <nav>
+      <a href="profile.html" class="active">Profile</a>
+      <a href="../recipe/recipe.html">Recipes</a>
+    </nav>
+
+  </aside>
+
+
+  <!-- Main -->
+  <main class="main-content">
+
+    <header>
+      <h1 id="welcome">Loading...</h1>
+      <p>Manage your preferences</p>
+    </header>
+
+
+    <!-- Allergies -->
+    <section>
+
+      <h2>Allergies</h2>
+
+      <div class="input-row">
+        <input id="newAllergy" placeholder="Add allergy..." />
+        <button id="addAllergyBtn">Add</button>
+      </div>
+
+      <div id="allergiesBox" class="pill-box"></div>
+
+    </section>
+
+
+    <!-- Diet -->
+    <section>
+
+      <h2>Diet Preferences</h2>
+
+      <div class="input-row">
+        <input id="newDiet" placeholder="Add diet..." />
+        <button id="addDietBtn">Add</button>
+      </div>
+
+      <div id="dietsBox" class="pill-box"></div>
+
+    </section>
+
+
+    <!-- Save -->
+    <footer>
+
+      <button id="saveBtn">Save Changes</button>
+
+      <span id="msg"></span>
+
+    </footer>
+
+
+  </main>
+
 </div>
 
-<div id="allergiesBox"></div>
 
-
-<h3>Diet Preferences</h3>
-
-<!-- Add Diet -->
-<div class="input-group">
-  <input
-    type="text"
-    id="newDiet"
-    placeholder="Add new preference"
-  />
-  <button id="addDietBtn">Add</button>
-</div>
-
-<div id="dietsBox"></div>
-
-
-  <br>
-
-  <button id="saveBtn">Save</button>
-
-  <p id="msg"></p>
-
-</main>
-
-
-
-  <script src="profile.js"></script>
-
-
+<script src="profile.js"></script>
 </body>
 </html>
