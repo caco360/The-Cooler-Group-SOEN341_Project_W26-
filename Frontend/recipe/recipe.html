@@ -39,13 +39,57 @@
 
     <section>
 
-      <h2>Coming Soon</h2>
+      <section>
+  <h2>Your Recipes</h2>
+  <div id="recipesContainer"></div>
+</section>
 
-      <p style="color:#444;font-size:14px;">
-        This page will contain your personalized recipes.
-      </p>
+<script>
+document.addEventListener("DOMContentLoaded", loadRecipes);
 
-    </section>
+async function loadRecipes() {
+
+  const container = document.getElementById("recipesContainer");
+  container.innerHTML = "Loading...";
+
+  try {
+
+    const res = await fetch("/my-recipes");
+
+    if (res.status === 401) {
+      window.location.href = "/login/login.html";
+      return;
+    }
+
+    const data = await res.json();
+
+    if (!data.ok) {
+      container.innerHTML = "Error loading recipes.";
+      return;
+    }
+
+    if (!data.recipes.length) {
+      container.innerHTML = "<p>No recipes saved yet.</p>";
+      return;
+    }
+
+    container.innerHTML = data.recipes.map(r => `
+      <div class="recipe-card">
+        <h3>${r.title}</h3>
+        <p>${r.description || "No description"}</p>
+        <p><strong>Prep:</strong> ${r.prep_time || "-"} min</p>
+        <div class="ingredient-box">
+          ${(r.ingredients || []).map(i => `<span class="ingredient-pill">${i}</span>`).join("")}
+        </div>
+      </div>
+    `).join("");
+
+  } catch (err) {
+    console.error(err);
+    container.innerHTML = "Server error.";
+  }
+}
+</script>
 
   </main>
 

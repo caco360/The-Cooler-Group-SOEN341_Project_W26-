@@ -228,3 +228,52 @@ footer {
   font-size: 14px;
   color: #91380c;
 }
+/* =========================
+   RECIPE CARDS
+========================= */
+
+#recipesContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.recipe-card {
+  background: #fafafa;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #eee;
+  transition: all 0.2s ease;
+}
+
+.recipe-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+
+.recipe-card h3 {
+  margin-bottom: 8px;
+  color: #1c1c1c;
+}
+
+.recipe-card p {
+  margin-bottom: 8px;
+  color: #444;
+  font-size: 14px;
+}
+
+.ingredient-box {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ingredient-pill {
+  background: #f3b83e;
+  color: #1c1c1c;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+}
