@@ -191,6 +191,36 @@ app.get("/my-recipes", async (req, res) => {
 });
 
 // ===============================
+// Delete a recipe (only if owned by user)
+// ===============================
+app.delete("/recipes/:id", async (req, res) => {
+  const userId = req.session.userId;
+
+  if (!userId) {
+    return res.status(401).json({ ok: false, message: "Not logged in" });
+  }
+
+  const recipeId = Number(req.params.id);
+
+  if (!Number.isFinite(recipeId)) {
+    return res.status(400).json({ ok: false, message: "Invalid recipe id" });
+  }
+
+  const { error } = await supabase
+    .from("Recipes")
+    .delete()
+    .eq("id", recipeId)
+    .eq("user_id", userId); // prevents deleting another user's recipe
+
+  if (error) {
+    console.error(error);
+    return res.status(500).json({ ok: false, message: "Server error" });
+  }
+
+  return res.json({ ok: true });
+});
+
+// ===============================
 // Add Allergy or Diet Option
 // ===============================
 app.post("/api/add-option", async (req, res) => {

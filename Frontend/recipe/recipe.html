@@ -1,99 +1,196 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Recipes</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-
   <link rel="stylesheet" href="recipe.css">
 </head>
 
 <body>
+  <div class="app-layout">
 
-<div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h2 class="logo">Meal Major</h2>
 
-  <!-- Sidebar -->
-  <aside class="sidebar">
+      <nav>
+        <a href="../profile/profile.html">Profile</a>
+        <a href="recipe.html" class="active">Recipes</a>
+      </nav>
+    </aside>
 
-    <h2 class="logo">Meal Major</h2>
+    <!-- Main -->
+    <main class="main-content">
 
-    <nav>
-      <a href="../profile/profile.html">Profile</a>
-      <a href="recipe.html" class="active">Recipes</a>
-    </nav>
-
-  </aside>
-
-
-  <!-- Main -->
-  <main class="main-content">
-
-    <header>
-      <h1>Recipes</h1>
-      <p>Your saved recipes will appear here</p>
-    </header>
-
-
-    <section>
-
-      <section>
-  <h2>Your Recipes</h2>
-  <div id="recipesContainer"></div>
-</section>
-
-<script>
-document.addEventListener("DOMContentLoaded", loadRecipes);
-
-async function loadRecipes() {
-
-  const container = document.getElementById("recipesContainer");
-  container.innerHTML = "Loading...";
-
-  try {
-
-    const res = await fetch("/my-recipes");
-
-    if (res.status === 401) {
-      window.location.href = "/login/login.html";
-      return;
-    }
-
-    const data = await res.json();
-
-    if (!data.ok) {
-      container.innerHTML = "Error loading recipes.";
-      return;
-    }
-
-    if (!data.recipes.length) {
-      container.innerHTML = "<p>No recipes saved yet.</p>";
-      return;
-    }
-
-    container.innerHTML = data.recipes.map(r => `
-      <div class="recipe-card">
-        <h3>${r.title}</h3>
-        <p>${r.description || "No description"}</p>
-        <p><strong>Prep:</strong> ${r.prep_time || "-"} min</p>
-        <div class="ingredient-box">
-          ${(r.ingredients || []).map(i => `<span class="ingredient-pill">${i}</span>`).join("")}
+      <header class="page-header">
+        <div class="header-left">
+          <h1>Recipes</h1>
+          <p id="subtitle">Your saved recipes will appear here</p>
         </div>
-      </div>
-    `).join("");
 
-  } catch (err) {
-    console.error(err);
-    container.innerHTML = "Server error.";
-  }
-}
-</script>
+        <div class="header-actions">
+          <button id="refreshBtn" class="btn-secondary" type="button">Refresh</button>
+        </div>
+      </header>
 
-  </main>
+      <section class="recipes-section">
+        <div class="section-top">
+          <h2>Your Recipes</h2>
+          <span id="status" class="status">Loading...</span>
+        </div>
 
-</div>
+        <div id="recipesGrid" class="recipes-grid"></div>
+      </section>
 
+    </main>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", init);
+
+    function init() {
+      document.getElementById("refreshBtn").addEventListener("click", loadRecipes);
+      loadRecipes();
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    async function loadRecipes() {
+      const statusEl = document.getElementById("status");
+      const grid = document.getElementById("recipesGrid");
+
+      statusEl.classList.remove("error");
+      statusEl.textContent = "Loading...";
+      grid.innerHTML = "";
+
+      // Check session first (matches your profile.js behavior)
+      const meRes = await fetch("/me");
+      if (meRes.status === 401) {
+        window.location.href = "/login/login.html";
+        return;
+      }
+
+      try {
+        const res = await fetch("/my-recipes");
+
+        if (res.status === 401) {
+          window.location.href = "/login/login.html";
+          return;
+        }
+
+        const data = await res.json();
+
+        if (!data.ok) {
+          statusEl.classList.add("error");
+          statusEl.textContent = "Could not load recipes.";
+          return;
+        }
+
+        const recipes = data.recipes || [];
+
+        if (recipes.length === 0) {
+          statusEl.textContent = "No recipes saved yet.";
+          return;
+        }
+
+        statusEl.textContent = "";
+
+        grid.innerHTML = recipes.map(r => {
+          const title = escapeHtml(r.title || "Untitled");
+          const desc = r.description ? escapeHtml(r.description) : "";
+          const prep = (r.prep_time === null || r.prep_time === undefined || r.prep_time === "")
+            ? "—"
+            : `${escapeHtml(r.prep_time)} min`;
+
+          const ingredients = Array.isArray(r.ingredients) ? r.ingredients : [];
+          const ingHtml = ingredients.length
+            ? ingredients.map(i => `<span class="ingredient-pill">${escapeHtml(i)}</span>`).join("")
+            : `<span class="muted">No ingredients listed</span>`;
+
+          return `
+            <article class="recipe-card" data-id="${r.id}">
+              <div class="recipe-top">
+                <div class="title-wrap">
+                  <h3 class="recipe-title">${title}</h3>
+                  <span class="prep-badge">${prep}</span>
+                </div>
+
+                <div class="card-actions">
+                  <button class="btn-danger" type="button" data-action="delete" data-id="${r.id}">
+                    Delete
+                  </button>
+                </div>
+              </div>
+
+              <p class="recipe-desc ${desc ? "" : "muted"}">
+                ${desc || "No description"}
+              </p>
+
+              <div class="ingredients-block">
+                <div class="ingredients-label">Ingredients</div>
+                <div class="ingredients-pills">
+                  ${ingHtml}
+                </div>
+              </div>
+            </article>
+          `;
+        }).join("");
+
+        // Wire up delete buttons
+        grid.querySelectorAll('button[data-action="delete"]').forEach(btn => {
+          btn.addEventListener("click", () => deleteRecipe(btn.dataset.id));
+        });
+
+      } catch (err) {
+        console.error(err);
+        statusEl.classList.add("error");
+        statusEl.textContent = "Server error.";
+      }
+    }
+
+    async function deleteRecipe(recipeId) {
+      const ok = confirm("Delete this recipe?");
+      if (!ok) return;
+
+      try {
+        const res = await fetch(`/recipes/${recipeId}`, { method: "DELETE" });
+
+        if (res.status === 401) {
+          window.location.href = "/login/login.html";
+          return;
+        }
+
+        const data = await res.json();
+
+        if (!data.ok) {
+          alert(data.message || "Delete failed.");
+          return;
+        }
+
+        // remove from DOM quickly
+        const card = document.querySelector(`.recipe-card[data-id="${recipeId}"]`);
+        if (card) card.remove();
+
+        // if none left, show empty state
+        const grid = document.getElementById("recipesGrid");
+        const statusEl = document.getElementById("status");
+        if (!grid.children.length) statusEl.textContent = "No recipes saved yet.";
+
+      } catch (err) {
+        console.error(err);
+        alert("Server error.");
+      }
+    }
+  </script>
 </body>
 </html>
