@@ -153,11 +153,11 @@ async function saveProfile() {
 
     const data = await res.json();
 
-    msg.textContent = data.ok ? "Saved ✅" : "Error ❌";
+    msg.textContent = data.ok ? "Saved " : "Error ";
 
   }
   catch {
-    msg.textContent = "Server error ❌";
+    msg.textContent = "Server error ";
   }
 
 
