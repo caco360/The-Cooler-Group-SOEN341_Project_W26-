@@ -76,6 +76,27 @@ body{
 }
 .btn-primary:hover{ transform: translateY(-3px); box-shadow: 0 14px 34px rgba(217,140,48,0.18); }
 
+/* Make the form's submit button larger and yellow to match the site's accent
+   This targets the default button inside the login card so you don't need to
+   add classes in the HTML. */
+.login-box button[type="submit"]{
+  width:100%;
+  padding:16px 18px;
+  border-radius:14px;
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(135deg,var(--accent-gold),var(--accent-gold-2));
+  color: #111111;
+  font-weight:800;
+  font-size:18px;
+  box-shadow: 0 12px 30px rgba(217,140,48,0.18);
+  transition: transform 0.14s ease, box-shadow 0.14s ease, opacity 0.12s ease;
+}
+.login-box button[type="submit"]:hover{
+  transform: translateY(-3px);
+  box-shadow: 0 18px 44px rgba(217,140,48,0.22);
+}
+
 .register, .pwreset{ margin-top:12px; font-size:14px; color:#6b5b4b; }
 .register a, .pwreset a{ color:var(--accent-deep); text-decoration:none; font-weight:600; }
 .register a:hover, .pwreset a:hover{ text-decoration:underline; }

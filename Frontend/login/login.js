@@ -20,6 +20,13 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    // Password policy: at least 8 characters, one uppercase, one number
+    const pwdPolicy = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!pwdPolicy.test(password)) {
+      errorBox.textContent = "Password must be at least 8 characters long and include at least one uppercase letter and one number.";
+      return;
+    }
+
     try {
       // Same endpoint as working version
       const response = await fetch("/login", {
