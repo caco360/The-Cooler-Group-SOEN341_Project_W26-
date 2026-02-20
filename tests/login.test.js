@@ -19,7 +19,7 @@ describe("POST /login", () => {
     const res = await request(app)
       .post("/login")
       .send({
-        username: "testuser",
+        username: "Carl",
         password: "wrong"
       });
 
