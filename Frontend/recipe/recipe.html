@@ -29,6 +29,15 @@
         <div class="header-left">
           <h1>Recipes</h1>
           <p id="subtitle">Your saved recipes will appear here</p>
+
+          <div class="search-wrap">
+            <input id="recipeSearch" type="search" placeholder="Search recipes by name" aria-label="Search recipes" />
+          </div>
+          
+            
+            <div class="search-actions">
+              <button id="filterBtn" class="btn-secondary" type="button">Filter</button>
+            </div>
         </div>
 
         <div class="header-actions">
@@ -39,6 +48,7 @@
       <section class="recipes-section">
         <div class="section-top">
           <h2>Your Recipes</h2>
+
           <span id="status" class="status">Loading...</span>
         </div>
 
@@ -53,6 +63,99 @@
 
     function init() {
       document.getElementById("refreshBtn").addEventListener("click", loadRecipes);
+
+      const searchEl = document.getElementById("recipeSearch");
+      // debounce helper
+      function debounce(fn, wait = 200) {
+        let t;
+        return (...args) => {
+          clearTimeout(t);
+          t = setTimeout(() => fn(...args), wait);
+        };
+      }
+
+      const onSearch = debounce(() => {
+        const q = (searchEl.value || "").trim();
+        renderRecipes(window._recipes || [], q);
+      }, 200);
+
+      searchEl.addEventListener("input", onSearch);
+
+      // Filter button: manual trigger for filtering using current search value
+      const filterBtn = document.getElementById("filterBtn");
+      if (filterBtn) {
+        // Open modal form when clicking Filter
+        filterBtn.addEventListener("click", () => {
+          const modal = document.getElementById("filterModal");
+          const nameField = document.getElementById("filterName");
+          const costMinField = document.getElementById("filterCostMin");
+          const costMaxField = document.getElementById("filterCostMax");
+
+          // prefill name from current search input
+          nameField.value = (searchEl.value || "").trim();
+          costMinField.value = "";
+          costMaxField.value = "";
+
+          modal.classList.add("open");
+          nameField.focus();
+        });
+      }
+
+      // Pressing Enter inside the search input triggers the filter as well
+      searchEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const q = (searchEl.value || "").trim();
+          renderRecipes(window._recipes || [], q);
+        }
+      });
+
+      // --- Modal wiring (apply/cancel) moved into init so handlers attach immediately ---
+      const modal = document.getElementById("filterModal");
+      const nameField = document.getElementById("filterName");
+      const costMinField = document.getElementById("filterCostMin");
+      const costMaxField = document.getElementById("filterCostMax");
+      const applyBtn = document.getElementById("applyFilterBtn");
+      const cancelBtn = document.getElementById("cancelFilterBtn");
+
+      function closeModal() {
+        if (!modal) return;
+        modal.classList.remove("open");
+        modal.setAttribute("aria-hidden", "true");
+      }
+
+      applyBtn?.addEventListener("click", () => {
+        const nameQ = (nameField.value || "").trim();
+        const min = costMinField.value === "" ? null : costMinField.value;
+        const max = costMaxField.value === "" ? null : costMaxField.value;
+        // sync the main search input so users see the applied name filter
+        const mainSearch = document.getElementById("recipeSearch");
+        if (mainSearch) mainSearch.value = nameQ;
+        closeModal();
+        // Use OR logic: show recipes that match the name OR the cost
+        renderRecipes(window._recipes || [], nameQ, min, max, true);
+        const filterBtnEl = document.getElementById("filterBtn");
+        if (filterBtnEl) filterBtnEl.focus();
+      });
+
+      cancelBtn?.addEventListener("click", () => {
+        closeModal();
+        if (nameField) nameField.value = "";
+        if (costMinField) costMinField.value = "";
+        if (costMaxField) costMaxField.value = "";
+        const mainSearch = document.getElementById("recipeSearch");
+        if (mainSearch) mainSearch.value = "";
+        renderRecipes(window._recipes || [], "", null, null);
+        const filterBtnEl = document.getElementById("filterBtn");
+        if (filterBtnEl) filterBtnEl.focus();
+      });
+
+      // close modal when clicking outside
+      modal?.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+
+      // Escape closes modal
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+
       loadRecipes();
     }
 
@@ -98,12 +201,21 @@
 
         const recipes = data.recipes || [];
 
+        // store for client-side filtering
+        window._recipes = recipes;
+
         if (recipes.length === 0) {
           statusEl.textContent = "No recipes saved yet.";
+          grid.innerHTML = "";
           return;
         }
 
         statusEl.textContent = "";
+
+  // initial render (no query)
+  renderRecipes(recipes, "", null, null);
+
+  return; // renderRecipes will wire up actions
 
         grid.innerHTML = recipes.map(r => {
           const title = escapeHtml(r.title || "Untitled");
@@ -120,10 +232,10 @@
           return `
             <article class="recipe-card" data-id="${r.id}">
               <div class="recipe-top">
-                <div class="title-wrap">
-                  <h3 class="recipe-title">${title}</h3>
-                  <span class="prep-badge">${prep}</span>
-                </div>
+                        <div class="title-wrap">
+                          <h3 class="recipe-title">${title}</h3>
+                          <span class="prep-badge">${prep}</span>
+                        </div>
 
                 <div class="card-actions">
                   <button class="btn-danger" type="button" data-action="delete" data-id="${r.id}">
@@ -156,6 +268,154 @@
         statusEl.classList.add("error");
         statusEl.textContent = "Server error.";
       }
+    }
+
+    // Render a list of recipes into the grid, optionally filtering by name and cost
+    // costMin and costMax are numbers (or null). We look for a numeric property on each recipe: `cost` .
+    // useOr: if true, match recipes where name OR cost matches (instead of AND)
+    function renderRecipes(recipes, query = "", costMin = null, costMax = null, useOr = false) {
+      const statusEl = document.getElementById("status");
+      const grid = document.getElementById("recipesGrid");
+
+      const q = (query || "").trim().toLowerCase();
+
+      const nameFilterActive = Boolean(q);
+      const costFilterActive = ((costMin !== null && costMin !== "") || (costMax !== null && costMax !== ""));
+
+      const minN = (costMin === null || costMin === "") ? null : Number(costMin);
+      const maxN = (costMax === null || costMax === "") ? null : Number(costMax);
+
+      const filtered = recipes.filter(r => {
+        const nameMatch = nameFilterActive ? ((r.title || "").toLowerCase().includes(q)) : false;
+
+        // cost match: use the database `cost` field explicitly
+        let costMatch = false;
+        if (costFilterActive) {
+          const val = (r.cost ?? null);
+          if (val !== null && val !== undefined && val !== "") {
+            const num = Number(val);
+            if (Number.isFinite(num)) {
+              if (minN !== null && !Number.isNaN(minN) && num < minN) costMatch = false;
+              else if (maxN !== null && !Number.isNaN(maxN) && num > maxN) costMatch = false;
+              else costMatch = true;
+            }
+          }
+        }
+
+        if (!nameFilterActive && !costFilterActive) return true;
+        if (useOr) {
+          if (nameFilterActive && costFilterActive) return nameMatch || costMatch;
+          return nameFilterActive ? nameMatch : costMatch;
+        }
+        // default AND logic
+        if (nameFilterActive && costFilterActive) return nameMatch && costMatch;
+        return nameFilterActive ? nameMatch : costMatch;
+      });
+
+      if (!filtered.length) {
+        if (!recipes.length) {
+          statusEl.textContent = "No recipes saved yet.";
+        } else {
+          statusEl.textContent = "No recipes match your search.";
+        }
+        grid.innerHTML = "";
+        return;
+      }
+
+      statusEl.textContent = "";
+
+      grid.innerHTML = filtered.map(r => {
+        const title = escapeHtml(r.title || "Untitled");
+        const desc = r.description ? escapeHtml(r.description) : "";
+        const prep = (r.prep_time === null || r.prep_time === undefined || r.prep_time === "")
+          ? "—"
+          : `${escapeHtml(r.prep_time)} min`;
+
+        const ingredients = Array.isArray(r.ingredients) ? r.ingredients : [];
+        const ingHtml = ingredients.length
+          ? ingredients.map(i => `<span class="ingredient-pill">${escapeHtml(i)}</span>`).join("")
+          : `<span class="muted">No ingredients listed</span>`;
+
+        return `
+          <article class="recipe-card" data-id="${r.id}">
+            <div class="recipe-top">
+              <div class="title-wrap">
+                <h3 class="recipe-title">${title}</h3>
+                <span class="prep-badge">${prep}</span>
+              </div>
+
+              <div class="card-actions">
+                <button class="btn-danger" type="button" data-action="delete" data-id="${r.id}">
+                  Delete
+                </button>
+              </div>
+            </div>
+
+            <p class="recipe-desc ${desc ? "" : "muted"}">
+              ${desc || "No description"}
+            </p>
+
+            <div class="ingredients-block">
+              <div class="ingredients-label">Ingredients</div>
+              <div class="ingredients-pills">
+                ${ingHtml}
+              </div>
+            </div>
+          </article>
+        `;
+      }).join("");
+
+      // Wire up delete buttons
+      grid.querySelectorAll('button[data-action="delete"]').forEach(btn => {
+        btn.addEventListener("click", () => deleteRecipe(btn.dataset.id));
+      });
+
+      // Modal: wire apply/cancel buttons
+      document.addEventListener("DOMContentLoaded", () => {
+        const modal = document.getElementById("filterModal");
+        if (!modal) return;
+
+        const applyBtn = document.getElementById("applyFilterBtn");
+        const cancelBtn = document.getElementById("cancelFilterBtn");
+        const nameField = document.getElementById("filterName");
+        const costMinField = document.getElementById("filterCostMin");
+        const costMaxField = document.getElementById("filterCostMax");
+
+        applyBtn?.addEventListener("click", () => {
+          const nameQ = (nameField.value || "").trim();
+          const min = costMinField.value === "" ? null : costMinField.value;
+          const max = costMaxField.value === "" ? null : costMaxField.value;
+          // sync the main search input so users see the applied name filter
+          const mainSearch = document.getElementById("recipeSearch");
+          if (mainSearch) mainSearch.value = nameQ;
+          modal.classList.remove("open");
+          renderRecipes(window._recipes || [], nameQ, min, max);
+        });
+
+        cancelBtn?.addEventListener("click", () => {
+          // Close modal and return to the recipe list (clear filters)
+          modal.classList.remove("open");
+
+          // clear modal fields
+          nameField.value = "";
+          costMinField.value = "";
+          costMaxField.value = "";
+
+          // clear main search and re-render full list
+          const mainSearch = document.getElementById("recipeSearch");
+          if (mainSearch) mainSearch.value = "";
+          renderRecipes(window._recipes || [], "", null, null);
+
+          // return focus to the Filter button so the user is back on the page
+          const filterBtnEl = document.getElementById("filterBtn");
+          if (filterBtnEl) filterBtnEl.focus();
+        });
+
+        // Close modal when clicking outside dialog
+        modal.addEventListener("click", (e) => {
+          if (e.target === modal) modal.classList.remove("open");
+        });
+      });
     }
 
     async function deleteRecipe(recipeId) {
@@ -192,5 +452,29 @@
       }
     }
   </script>
+
+  <!-- Filter modal (hidden until Filter button is clicked) -->
+  <div id="filterModal" class="modal" aria-hidden="true">
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="filterTitle">
+      <h3 id="filterTitle">Filter recipes</h3>
+
+      <label for="filterName">Name contains</label>
+      <input id="filterName" type="text" placeholder="Recipe name" />
+
+      <div style="height:8px"></div>
+
+      <label>Cost range</label>
+      <div class="cost-row">
+        <input id="filterCostMin" type="number" step="0.01" placeholder="Min" />
+        <span class="cost-sep">—</span>
+        <input id="filterCostMax" type="number" step="0.01" placeholder="Max" />
+      </div>
+
+      <div class="modal-actions">
+        <button id="applyFilterBtn" class="btn-secondary" type="button">Apply</button>
+        <button id="cancelFilterBtn" class="btn-danger" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

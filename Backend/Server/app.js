@@ -24,6 +24,12 @@ const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, "../../Frontend"))); 
 
 
+// Serve the main homepage at root -> Frontend/Home/index.html
+app.get("/", (req, res) => {
+  return res.sendFile(path.join(__dirname, "../../Frontend/Home/index.html"));
+});
+
+
 app.get("/health", (req, res) =>{
   res.status(200).json({ok:true});
 });
@@ -171,7 +177,7 @@ app.get("/my-recipes", async (req, res) => {
 
   const { data, error } = await supabase
     .from("Recipes")
-    .select("id, title, description, prep_time, ingredients")
+    .select("id, title, description, prep_time, ingredients, cost")
     .eq("user_id", userId)
     .order("id", { ascending: false });
 
@@ -219,6 +225,7 @@ app.delete("/recipes/:id", async (req, res) => {
 
   return res.json({ ok: true });
 });
+
 
 // ===============================
 // Add Allergy or Diet Option
