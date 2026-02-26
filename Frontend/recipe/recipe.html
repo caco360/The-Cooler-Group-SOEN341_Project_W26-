@@ -33,11 +33,10 @@
           <div class="search-wrap">
             <input id="recipeSearch" type="search" placeholder="Search recipes by name" aria-label="Search recipes" />
           </div>
-          
-            
-            <div class="search-actions">
-              <button id="filterBtn" class="btn-secondary" type="button">Filter</button>
-            </div>
+
+          <div class="search-actions">
+            <button id="filterBtn" class="btn-secondary" type="button">Filter</button>
+          </div>
         </div>
 
         <div class="header-actions">
@@ -48,7 +47,6 @@
       <section class="recipes-section">
         <div class="section-top">
           <h2>Your Recipes</h2>
-
           <span id="status" class="status">Loading...</span>
         </div>
 
@@ -58,423 +56,492 @@
     </main>
   </div>
 
-  <script>
-    document.addEventListener("DOMContentLoaded", init);
+<script>
+document.addEventListener("DOMContentLoaded", init);
 
-    function init() {
-      document.getElementById("refreshBtn").addEventListener("click", loadRecipes);
+function init() {
 
-      const searchEl = document.getElementById("recipeSearch");
-      // debounce helper
-      function debounce(fn, wait = 200) {
-        let t;
-        return (...args) => {
-          clearTimeout(t);
-          t = setTimeout(() => fn(...args), wait);
-        };
-      }
+  document.getElementById("refreshBtn").addEventListener("click", loadRecipes);
 
-      const onSearch = debounce(() => {
-        const q = (searchEl.value || "").trim();
-        renderRecipes(window._recipes || [], q);
-      }, 200);
+  const searchEl = document.getElementById("recipeSearch");
 
-      searchEl.addEventListener("input", onSearch);
+  function debounce(fn, wait = 200) {
+    let t;
+    return (...args) => {
+      clearTimeout(t);
+      t = setTimeout(() => fn(...args), wait);
+    };
+  }
 
-      // Filter button: manual trigger for filtering using current search value
-      const filterBtn = document.getElementById("filterBtn");
-      if (filterBtn) {
-        // Open modal form when clicking Filter
-        filterBtn.addEventListener("click", () => {
-          const modal = document.getElementById("filterModal");
-          const nameField = document.getElementById("filterName");
-          const costMinField = document.getElementById("filterCostMin");
-          const costMaxField = document.getElementById("filterCostMax");
+  const onSearch = debounce(() => {
+    const q = (searchEl.value || "").trim();
+    renderRecipes(window._recipes || [], q);
+  }, 200);
 
-          // prefill name from current search input
-          nameField.value = (searchEl.value || "").trim();
-          costMinField.value = "";
-          costMaxField.value = "";
+  searchEl.addEventListener("input", onSearch);
 
-          modal.classList.add("open");
-          nameField.focus();
-        });
-      }
+  const filterBtn = document.getElementById("filterBtn");
 
-      // Pressing Enter inside the search input triggers the filter as well
-      searchEl.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          const q = (searchEl.value || "").trim();
-          renderRecipes(window._recipes || [], q);
-        }
-      });
+  if (filterBtn) {
+    filterBtn.addEventListener("click", () => {
 
-      // --- Modal wiring (apply/cancel) moved into init so handlers attach immediately ---
       const modal = document.getElementById("filterModal");
       const nameField = document.getElementById("filterName");
       const costMinField = document.getElementById("filterCostMin");
       const costMaxField = document.getElementById("filterCostMax");
-      const applyBtn = document.getElementById("applyFilterBtn");
-      const cancelBtn = document.getElementById("cancelFilterBtn");
+      const timeMinField = document.getElementById("filterTimeMin");
+      const timeMaxField = document.getElementById("filterTimeMax");
 
-      function closeModal() {
-        if (!modal) return;
-        modal.classList.remove("open");
-        modal.setAttribute("aria-hidden", "true");
-      }
+      nameField.value = (searchEl.value || "").trim();
+      costMinField.value = "";
+      costMaxField.value = "";
+      timeMinField.value = "";
+      timeMaxField.value = "";
 
-      applyBtn?.addEventListener("click", () => {
-        const nameQ = (nameField.value || "").trim();
-        const min = costMinField.value === "" ? null : costMinField.value;
-        const max = costMaxField.value === "" ? null : costMaxField.value;
-        // sync the main search input so users see the applied name filter
-        const mainSearch = document.getElementById("recipeSearch");
-        if (mainSearch) mainSearch.value = nameQ;
-        closeModal();
-        // Use OR logic: show recipes that match the name OR the cost
-        renderRecipes(window._recipes || [], nameQ, min, max, true);
-        const filterBtnEl = document.getElementById("filterBtn");
-        if (filterBtnEl) filterBtnEl.focus();
-      });
+      modal.classList.add("open");
+      nameField.focus();
+    });
+  }
 
-      cancelBtn?.addEventListener("click", () => {
-        closeModal();
-        if (nameField) nameField.value = "";
-        if (costMinField) costMinField.value = "";
-        if (costMaxField) costMaxField.value = "";
-        const mainSearch = document.getElementById("recipeSearch");
-        if (mainSearch) mainSearch.value = "";
-        renderRecipes(window._recipes || [], "", null, null);
-        const filterBtnEl = document.getElementById("filterBtn");
-        if (filterBtnEl) filterBtnEl.focus();
-      });
+  searchEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const q = (searchEl.value || "").trim();
+      renderRecipes(window._recipes || [], q);
+    }
+  });
 
-      // close modal when clicking outside
-      modal?.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+  const modal = document.getElementById("filterModal");
+  const nameField = document.getElementById("filterName");
+  const costMinField = document.getElementById("filterCostMin");
+  const costMaxField = document.getElementById("filterCostMax");
+  const timeMinField = document.getElementById("filterTimeMin");
+  const timeMaxField = document.getElementById("filterTimeMax");
+  const applyBtn = document.getElementById("applyFilterBtn");
+  const cancelBtn = document.getElementById("cancelFilterBtn");
 
-      // Escape closes modal
-      document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+  function closeModal() {
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden", "true");
+  }
 
-      loadRecipes();
+  applyBtn.addEventListener("click", () => {
+
+    const nameQ = (nameField.value || "").trim();
+
+    const min = costMinField.value === "" ? null : costMinField.value;
+    const max = costMaxField.value === "" ? null : costMaxField.value;
+
+    const tMin = timeMinField.value === "" ? null : timeMinField.value;
+    const tMax = timeMaxField.value === "" ? null : timeMaxField.value;
+
+    const mainSearch = document.getElementById("recipeSearch");
+    mainSearch.value = nameQ;
+
+    closeModal();
+
+    renderRecipes(window._recipes || [], nameQ, min, max, false, tMin, tMax);
+
+    filterBtn.focus();
+  });
+
+  cancelBtn.addEventListener("click", () => {
+
+    closeModal();
+
+    nameField.value = "";
+    costMinField.value = "";
+    costMaxField.value = "";
+    timeMinField.value = "";
+    timeMaxField.value = "";
+
+    const mainSearch = document.getElementById("recipeSearch");
+    mainSearch.value = "";
+
+    renderRecipes(window._recipes || [], "", null, null);
+
+    filterBtn.focus();
+  });
+
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeModal();
+  });
+
+  loadRecipes();
+}
+
+function escapeHtml(str) {
+  return String(str ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+async function loadRecipes() {
+
+  const statusEl = document.getElementById("status");
+  const grid = document.getElementById("recipesGrid");
+
+  statusEl.classList.remove("error");
+  statusEl.textContent = "Loading...";
+  grid.innerHTML = "";
+
+  const meRes = await fetch("/me");
+  if (meRes.status === 401) {
+    window.location.href = "/login/login.html";
+    return;
+  }
+
+  try {
+
+    const res = await fetch("/my-recipes");
+
+    if (res.status === 401) {
+      window.location.href = "/login/login.html";
+      return;
     }
 
-    function escapeHtml(str) {
-      return String(str ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+    const data = await res.json();
+
+    if (!data.ok) {
+      statusEl.classList.add("error");
+      statusEl.textContent = "Could not load recipes.";
+      return;
     }
 
-    async function loadRecipes() {
-      const statusEl = document.getElementById("status");
-      const grid = document.getElementById("recipesGrid");
+    const recipes = data.recipes || [];
 
-      statusEl.classList.remove("error");
-      statusEl.textContent = "Loading...";
+    window._recipes = recipes;
+
+    if (!recipes.length) {
+      statusEl.textContent = "No recipes saved yet.";
       grid.innerHTML = "";
+      return;
+    }
 
-      // Check session first (matches your profile.js behavior)
-      const meRes = await fetch("/me");
-      if (meRes.status === 401) {
-        window.location.href = "/login/login.html";
-        return;
-      }
+    statusEl.textContent = "";
+    renderRecipes(recipes, "", null, null);
 
-      try {
-        const res = await fetch("/my-recipes");
+  } catch (err) {
+    console.error(err);
+    statusEl.classList.add("error");
+    statusEl.textContent = "Server error.";
+  }
+}
 
-        if (res.status === 401) {
-          window.location.href = "/login/login.html";
-          return;
+function renderRecipes(
+  recipes,
+  query = "",
+  costMin = null,
+  costMax = null,
+  useOr = false,
+  timeMin = null,
+  timeMax = null
+) {
+
+  const statusEl = document.getElementById("status");
+  const grid = document.getElementById("recipesGrid");
+
+  const q = (query || "").trim().toLowerCase();
+
+  const nameFilterActive = Boolean(q);
+  const costFilterActive =
+    ((costMin !== null && costMin !== "") || (costMax !== null && costMax !== ""));
+
+  const minN = (costMin === null || costMin === "") ? null : Number(costMin);
+  const maxN = (costMax === null || costMax === "") ? null : Number(costMax);
+
+  const filtered = recipes.filter(r => {
+
+    const nameMatch = nameFilterActive
+      ? ((r.title || "").toLowerCase().includes(q))
+      : false;
+
+    let costMatch = false;
+
+    if (costFilterActive) {
+
+      const val = (r.cost ?? null);
+
+      if (val !== null && val !== undefined && val !== "") {
+
+        const num = Number(val);
+
+        if (Number.isFinite(num)) {
+
+          if (minN !== null && !Number.isNaN(minN) && num < minN) costMatch = false;
+          else if (maxN !== null && !Number.isNaN(maxN) && num > maxN) costMatch = false;
+          else costMatch = true;
+
         }
-
-        const data = await res.json();
-
-        if (!data.ok) {
-          statusEl.classList.add("error");
-          statusEl.textContent = "Could not load recipes.";
-          return;
-        }
-
-        const recipes = data.recipes || [];
-
-        // store for client-side filtering
-        window._recipes = recipes;
-
-        if (recipes.length === 0) {
-          statusEl.textContent = "No recipes saved yet.";
-          grid.innerHTML = "";
-          return;
-        }
-
-        statusEl.textContent = "";
-
-  // initial render (no query)
-  renderRecipes(recipes, "", null, null);
-
-  return; // renderRecipes will wire up actions
-
-        grid.innerHTML = recipes.map(r => {
-          const title = escapeHtml(r.title || "Untitled");
-          const desc = r.description ? escapeHtml(r.description) : "";
-          const prep = (r.prep_time === null || r.prep_time === undefined || r.prep_time === "")
-            ? "—"
-            : `${escapeHtml(r.prep_time)} min`;
-
-          const ingredients = Array.isArray(r.ingredients) ? r.ingredients : [];
-          const ingHtml = ingredients.length
-            ? ingredients.map(i => `<span class="ingredient-pill">${escapeHtml(i)}</span>`).join("")
-            : `<span class="muted">No ingredients listed</span>`;
-
-          return `
-            <article class="recipe-card" data-id="${r.id}">
-              <div class="recipe-top">
-                        <div class="title-wrap">
-                          <h3 class="recipe-title">${title}</h3>
-                          <span class="prep-badge">${prep}</span>
-                        </div>
-
-                <div class="card-actions">
-                  <button class="btn-danger" type="button" data-action="delete" data-id="${r.id}">
-                    Delete
-                  </button>
-                </div>
-              </div>
-
-              <p class="recipe-desc ${desc ? "" : "muted"}">
-                ${desc || "No description"}
-              </p>
-
-              <div class="ingredients-block">
-                <div class="ingredients-label">Ingredients</div>
-                <div class="ingredients-pills">
-                  ${ingHtml}
-                </div>
-              </div>
-            </article>
-          `;
-        }).join("");
-
-        // Wire up delete buttons
-        grid.querySelectorAll('button[data-action="delete"]').forEach(btn => {
-          btn.addEventListener("click", () => deleteRecipe(btn.dataset.id));
-        });
-
-      } catch (err) {
-        console.error(err);
-        statusEl.classList.add("error");
-        statusEl.textContent = "Server error.";
       }
     }
 
-    // Render a list of recipes into the grid, optionally filtering by name and cost
-    // costMin and costMax are numbers (or null). We look for a numeric property on each recipe: `cost` .
-    // useOr: if true, match recipes where name OR cost matches (instead of AND)
-    function renderRecipes(recipes, query = "", costMin = null, costMax = null, useOr = false) {
-      const statusEl = document.getElementById("status");
-      const grid = document.getElementById("recipesGrid");
+    /* ----------- FIXED TIME FILTER ----------- */
+const timeFilterActive =
+  (timeMin !== null && timeMin !== "") ||
+  (timeMax !== null && timeMax !== "");
 
-      const q = (query || "").trim().toLowerCase();
+let timeMatch = true;
 
-      const nameFilterActive = Boolean(q);
-      const costFilterActive = ((costMin !== null && costMin !== "") || (costMax !== null && costMax !== ""));
+if (timeFilterActive) {
+  const t = Number(r.prep_time);
 
-      const minN = (costMin === null || costMin === "") ? null : Number(costMin);
-      const maxN = (costMax === null || costMax === "") ? null : Number(costMax);
+  // If prep_time is missing/invalid → fail the time filter cleanly
+  if (Number.isNaN(t)) timeMatch = false;
 
-      const filtered = recipes.filter(r => {
-        const nameMatch = nameFilterActive ? ((r.title || "").toLowerCase().includes(q)) : false;
+  const tMinN = timeMin === "" || timeMin === null ? null : Number(timeMin);
+  const tMaxN = timeMax === "" || timeMax === null ? null : Number(timeMax);
 
-        // cost match: use the database `cost` field explicitly
-        let costMatch = false;
-        if (costFilterActive) {
-          const val = (r.cost ?? null);
-          if (val !== null && val !== undefined && val !== "") {
-            const num = Number(val);
-            if (Number.isFinite(num)) {
-              if (minN !== null && !Number.isNaN(minN) && num < minN) costMatch = false;
-              else if (maxN !== null && !Number.isNaN(maxN) && num > maxN) costMatch = false;
-              else costMatch = true;
-            }
-          }
-        }
+  if (tMinN !== null && t < tMinN) timeMatch = false;
+  if (tMaxN !== null && t > tMaxN) timeMatch = false;
+}
+/* ----------------------------------------- */
 
-        if (!nameFilterActive && !costFilterActive) return true;
-        if (useOr) {
-          if (nameFilterActive && costFilterActive) return nameMatch || costMatch;
-          return nameFilterActive ? nameMatch : costMatch;
-        }
-        // default AND logic
-        if (nameFilterActive && costFilterActive) return nameMatch && costMatch;
-        return nameFilterActive ? nameMatch : costMatch;
-      });
+    return (
+      (
+        useOr
+          ? (
+              (nameFilterActive && nameMatch) ||
+              (costFilterActive && costMatch)
+            )
+          : (
+              (!nameFilterActive || nameMatch) &&
+              (!costFilterActive || costMatch)
+            )
+      )
+      && timeMatch
+    );
 
-      if (!filtered.length) {
-        if (!recipes.length) {
-          statusEl.textContent = "No recipes saved yet.";
-        } else {
-          statusEl.textContent = "No recipes match your search.";
-        }
-        grid.innerHTML = "";
-        return;
-      }
+  });
 
-      statusEl.textContent = "";
+  if (!filtered.length) {
 
-      grid.innerHTML = filtered.map(r => {
-        const title = escapeHtml(r.title || "Untitled");
-        const desc = r.description ? escapeHtml(r.description) : "";
-        const prep = (r.prep_time === null || r.prep_time === undefined || r.prep_time === "")
-          ? "—"
-          : `${escapeHtml(r.prep_time)} min`;
+    if (!recipes.length) statusEl.textContent = "No recipes saved yet.";
+    else statusEl.textContent = "No recipes match your search.";
 
-        const ingredients = Array.isArray(r.ingredients) ? r.ingredients : [];
-        const ingHtml = ingredients.length
-          ? ingredients.map(i => `<span class="ingredient-pill">${escapeHtml(i)}</span>`).join("")
-          : `<span class="muted">No ingredients listed</span>`;
+    grid.innerHTML = "";
+    return;
+  }
 
-        return `
-          <article class="recipe-card" data-id="${r.id}">
-            <div class="recipe-top">
-              <div class="title-wrap">
-                <h3 class="recipe-title">${title}</h3>
-                <span class="prep-badge">${prep}</span>
-              </div>
+  statusEl.textContent = "";
 
-              <div class="card-actions">
-                <button class="btn-danger" type="button" data-action="delete" data-id="${r.id}">
-                  Delete
-                </button>
-              </div>
-            </div>
+  grid.innerHTML = filtered.map(r => {
 
-            <p class="recipe-desc ${desc ? "" : "muted"}">
-              ${desc || "No description"}
-            </p>
+    const title = escapeHtml(r.title || "Untitled");
+    const desc = r.description ? escapeHtml(r.description) : "";
 
-            <div class="ingredients-block">
-              <div class="ingredients-label">Ingredients</div>
-              <div class="ingredients-pills">
-                ${ingHtml}
-              </div>
-            </div>
-          </article>
-        `;
-      }).join("");
+    const prep =
+      (r.prep_time === null || r.prep_time === undefined || r.prep_time === "")
+        ? "—"
+        : `${escapeHtml(r.prep_time)} min`;
 
-      // Wire up delete buttons
-      grid.querySelectorAll('button[data-action="delete"]').forEach(btn => {
-        btn.addEventListener("click", () => deleteRecipe(btn.dataset.id));
-      });
+    const ingredients = Array.isArray(r.ingredients) ? r.ingredients : [];
 
-      // Modal: wire apply/cancel buttons
-      document.addEventListener("DOMContentLoaded", () => {
-        const modal = document.getElementById("filterModal");
-        if (!modal) return;
+    const ingHtml = ingredients.length
+      ? ingredients.map(i => `<span class="ingredient-pill">${escapeHtml(i)}</span>`).join("")
+      : `<span class="muted">No ingredients listed</span>`;
 
-        const applyBtn = document.getElementById("applyFilterBtn");
-        const cancelBtn = document.getElementById("cancelFilterBtn");
-        const nameField = document.getElementById("filterName");
-        const costMinField = document.getElementById("filterCostMin");
-        const costMaxField = document.getElementById("filterCostMax");
+    return `
+      <article class="recipe-card" data-id="${r.id}">
+        <div class="recipe-top">
+          <div class="title-wrap">
+            <h3 class="recipe-title">${title}</h3>
+            <span class="prep-badge">${prep}</span>
+          </div>
 
-        applyBtn?.addEventListener("click", () => {
-          const nameQ = (nameField.value || "").trim();
-          const min = costMinField.value === "" ? null : costMinField.value;
-          const max = costMaxField.value === "" ? null : costMaxField.value;
-          // sync the main search input so users see the applied name filter
-          const mainSearch = document.getElementById("recipeSearch");
-          if (mainSearch) mainSearch.value = nameQ;
-          modal.classList.remove("open");
-          renderRecipes(window._recipes || [], nameQ, min, max);
-        });
+          <div class="card-actions">
+            <button class="btn-secondary" type="button" data-action="edit" data-id="${r.id}">Edit</button>
+            <button class="btn-danger" type="button" data-action="delete" data-id="${r.id}">Delete</button>
+          </div>
+        </div>
 
-        cancelBtn?.addEventListener("click", () => {
-          // Close modal and return to the recipe list (clear filters)
-          modal.classList.remove("open");
+        <p class="recipe-desc ${desc ? "" : "muted"}">
+          ${desc || "No description"}
+        </p>
 
-          // clear modal fields
-          nameField.value = "";
-          costMinField.value = "";
-          costMaxField.value = "";
+        <div class="ingredients-block">
+          <div class="ingredients-label">Ingredients</div>
+          <div class="ingredients-pills">
+            ${ingHtml}
+          </div>
+        </div>
+      </article>
+    `;
+  }).join("");
 
-          // clear main search and re-render full list
-          const mainSearch = document.getElementById("recipeSearch");
-          if (mainSearch) mainSearch.value = "";
-          renderRecipes(window._recipes || [], "", null, null);
+  grid.querySelectorAll('button[data-action="delete"]').forEach(btn => {
+    btn.addEventListener("click", () => deleteRecipe(btn.dataset.id));
+  });
 
-          // return focus to the Filter button so the user is back on the page
-          const filterBtnEl = document.getElementById("filterBtn");
-          if (filterBtnEl) filterBtnEl.focus();
-        });
+  grid.querySelectorAll('button[data-action="edit"]').forEach(btn => {
+    btn.addEventListener("click", () => startEdit(btn.dataset.id));
+  });
+}
 
-        // Close modal when clicking outside dialog
-        modal.addEventListener("click", (e) => {
-          if (e.target === modal) modal.classList.remove("open");
-        });
-      });
+async function deleteRecipe(recipeId) {
+
+  const ok = confirm("Delete this recipe?");
+  if (!ok) return;
+
+  try {
+
+    const res = await fetch(`/recipes/${recipeId}`, { method: "DELETE" });
+
+    if (res.status === 401) {
+      window.location.href = "/login/login.html";
+      return;
     }
 
-    async function deleteRecipe(recipeId) {
-      const ok = confirm("Delete this recipe?");
-      if (!ok) return;
+    const data = await res.json();
 
-      try {
-        const res = await fetch(`/recipes/${recipeId}`, { method: "DELETE" });
-
-        if (res.status === 401) {
-          window.location.href = "/login/login.html";
-          return;
-        }
-
-        const data = await res.json();
-
-        if (!data.ok) {
-          alert(data.message || "Delete failed.");
-          return;
-        }
-
-        // remove from DOM quickly
-        const card = document.querySelector(`.recipe-card[data-id="${recipeId}"]`);
-        if (card) card.remove();
-
-        // if none left, show empty state
-        const grid = document.getElementById("recipesGrid");
-        const statusEl = document.getElementById("status");
-        if (!grid.children.length) statusEl.textContent = "No recipes saved yet.";
-
-      } catch (err) {
-        console.error(err);
-        alert("Server error.");
-      }
+    if (!data.ok) {
+      alert(data.message || "Delete failed.");
+      return;
     }
-  </script>
 
-  <!-- Filter modal (hidden until Filter button is clicked) -->
-  <div id="filterModal" class="modal" aria-hidden="true">
-    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="filterTitle">
-      <h3 id="filterTitle">Filter recipes</h3>
+    window._recipes = window._recipes.filter(r => String(r.id) !== String(recipeId));
 
-      <label for="filterName">Name contains</label>
-      <input id="filterName" type="text" placeholder="Recipe name" />
+    const q = (document.getElementById("recipeSearch").value || "").trim();
+    renderRecipes(window._recipes, q);
 
-      <div style="height:8px"></div>
+  } catch (err) {
+    console.error(err);
+    alert("Server error.");
+  }
+}
 
-      <label>Cost range</label>
-      <div class="cost-row">
-        <input id="filterCostMin" type="number" step="0.01" placeholder="Min" />
-        <span class="cost-sep">—</span>
-        <input id="filterCostMax" type="number" step="0.01" placeholder="Max" />
-      </div>
+function startEdit(recipeId) {
 
-      <div class="modal-actions">
-        <button id="applyFilterBtn" class="btn-secondary" type="button">Apply</button>
-        <button id="cancelFilterBtn" class="btn-danger" type="button">Cancel</button>
-      </div>
+  const card = document.querySelector(`.recipe-card[data-id="${recipeId}"]`);
+  const recipe = (window._recipes || []).find(r => r.id == recipeId);
+
+  if (!card || !recipe) return;
+
+  const titleEl = card.querySelector(".recipe-title");
+  const descEl  = card.querySelector(".recipe-desc");
+  const prepEl  = card.querySelector(".prep-badge");
+
+  titleEl.outerHTML =
+    `<input class="edit-title" value="${escapeHtml(recipe.title || "")}">`;
+
+  descEl.outerHTML =
+    `<textarea class="edit-desc" rows="2">${escapeHtml(recipe.description || "")}</textarea>`;
+
+  prepEl.outerHTML =
+    `<span class="prep-badge">
+       <input class="edit-prep" type="number" value="${recipe.prep_time ?? ""}" style="width:60px"> min
+     </span>`;
+
+  const ingBlock = card.querySelector(".ingredients-pills");
+
+  const ingValue = (Array.isArray(recipe.ingredients) ? recipe.ingredients : []).join(", ");
+
+  ingBlock.innerHTML =
+    `<input class="edit-ingredients" value="${escapeHtml(ingValue)}">`;
+
+  const actions = card.querySelector(".card-actions");
+
+  actions.insertAdjacentHTML(
+    "afterbegin",
+    `<button class="btn-secondary" type="button" data-action="save" data-id="${recipeId}">Save</button>`
+  );
+
+  actions.querySelector('button[data-action="edit"]').remove();
+
+  actions.querySelector('button[data-action="save"]').addEventListener("click", () => {
+    saveRecipe(card);
+  });
+}
+
+async function saveRecipe(card) {
+
+  const id = card.dataset.id;
+
+  const payload = {
+    title: card.querySelector(".edit-title").value.trim(),
+    description: card.querySelector(".edit-desc").value.trim(),
+    prep_time: Number(card.querySelector(".edit-prep").value),
+    ingredients: card.querySelector(".edit-ingredients")
+      .value.split(",")
+      .map(v => v.trim())
+      .filter(Boolean)
+  };
+
+  try {
+
+    const res = await fetch(`/recipes/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.status === 401) {
+      window.location.href = "/login/login.html";
+      return;
+    }
+
+    const data = await res.json();
+
+    if (!data.ok) {
+      alert("Update failed.");
+      return;
+    }
+
+    const idx = window._recipes.findIndex(r => r.id == id);
+    if (idx !== -1) {
+      window._recipes[idx] = { ...window._recipes[idx], ...payload };
+    }
+
+    const q = (document.getElementById("recipeSearch").value || "").trim();
+    renderRecipes(window._recipes, q);
+
+  } catch (e) {
+    console.error(e);
+    alert("Server error.");
+  }
+}
+</script>
+
+<!-- Filter modal -->
+<div id="filterModal" class="modal" aria-hidden="true">
+  <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="filterTitle">
+    <h3 id="filterTitle">Filter recipes</h3>
+
+    <label for="filterName">Name contains</label>
+    <input id="filterName" type="text" placeholder="Recipe name" />
+
+    <div style="height:8px"></div>
+
+    <label>Cost range</label>
+    <div class="cost-row">
+      <input id="filterCostMin" type="number" step="0.01" placeholder="Min" />
+      <span class="cost-sep">—</span>
+      <input id="filterCostMax" type="number" step="0.01" placeholder="Max" />
+    </div>
+
+    <div style="height:10px"></div>
+
+    <!-- prep time filter -->
+    <label>Prep time (minutes)</label>
+    <div class="cost-row">
+      <input id="filterTimeMin" type="number" placeholder="Min" />
+      <span class="cost-sep">—</span>
+      <input id="filterTimeMax" type="number" placeholder="Max" />
+    </div>
+
+    <div class="modal-actions">
+      <button id="applyFilterBtn" class="btn-secondary" type="button">Apply</button>
+      <button id="cancelFilterBtn" class="btn-danger" type="button">Cancel</button>
     </div>
   </div>
+</div>
+
 </body>
 </html>
