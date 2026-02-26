@@ -43,7 +43,7 @@
         </div>
 
         <!-- Time filter -->
-        <div id ="recipies-filter" class="recipes-filter">
+        <div id="recipes-filter" class="recipes-filter">
           <label for="timeFilter">Max prep time (minutes)</label>
           <input
             type="number"
@@ -87,7 +87,6 @@
       statusEl.textContent = "Loading...";
       grid.innerHTML = "";
 
-      // Check session first
       const meRes = await fetch("/me");
       if (meRes.status === 401) {
         window.location.href = "/login/login.html";
@@ -112,7 +111,7 @@
 
         allRecipes = data.recipes || [];
 
-        if (allRecipes.length === 0) {
+        if (!allRecipes.length) {
           statusEl.textContent = "No recipes saved yet.";
           return;
         }
@@ -160,6 +159,9 @@
               </div>
 
               <div class="card-actions">
+                <button class="btn-secondary" type="button" data-action="edit" data-id="${r.id}">
+                  Edit
+                </button>
                 <button class="btn-danger" type="button" data-action="delete" data-id="${r.id}">
                   Delete
                 </button>
@@ -182,6 +184,10 @@
 
       grid.querySelectorAll('button[data-action="delete"]').forEach(btn => {
         btn.addEventListener("click", () => deleteRecipe(btn.dataset.id));
+      });
+
+      grid.querySelectorAll('button[data-action="edit"]').forEach(btn => {
+        btn.addEventListener("click", () => startEdit(btn.dataset.id));
       });
     }
 
@@ -223,17 +229,135 @@
           return;
         }
 
-        // remove from local cache
         allRecipes = allRecipes.filter(r => String(r.id) !== String(recipeId));
-
-        // re-apply current filter
-        filterByTime();
+        renderAfterEdit();
 
       } catch (err) {
         console.error(err);
         alert("Server error.");
       }
     }
+
+    /* =====================
+       Inline editing
+    ===================== */
+
+    function startEdit(recipeId) {
+
+      const card = document.querySelector(`.recipe-card[data-id="${recipeId}"]`);
+      const recipe = allRecipes.find(r => String(r.id) === String(recipeId));
+
+      if (!card || !recipe) return;
+
+      const ingredients = Array.isArray(recipe.ingredients)
+        ? recipe.ingredients.join(", ")
+        : "";
+
+      card.innerHTML = `
+        <div class="recipe-edit-form">
+
+          <div class="form-row">
+            <label>Title</label>
+            <input class="edit-title" type="text" value="${escapeHtml(recipe.title || "")}">
+          </div>
+
+          <div class="form-row">
+            <label>Description</label>
+            <textarea class="edit-desc">${escapeHtml(recipe.description || "")}</textarea>
+          </div>
+
+          <div class="form-row">
+            <label>Prep time (minutes)</label>
+            <input class="edit-prep" type="number" min="0" value="${recipe.prep_time ?? ""}">
+          </div>
+
+          <div class="form-row">
+            <label>Ingredients (comma separated)</label>
+            <input class="edit-ingredients" type="text" value="${escapeHtml(ingredients)}">
+          </div>
+
+          <div class="edit-actions">
+            <button class="btn-secondary" type="button" data-action="cancel">Cancel</button>
+            <button class="btn-primary" type="button" data-action="save">Save</button>
+          </div>
+
+        </div>
+      `;
+
+      card.querySelector('[data-action="cancel"]')
+        .addEventListener("click", renderAfterEdit);
+
+      card.querySelector('[data-action="save"]')
+        .addEventListener("click", () => saveEdit(recipeId));
+    }
+
+    async function saveEdit(recipeId) {
+
+      const card = document.querySelector(`.recipe-card[data-id="${recipeId}"]`);
+      if (!card) return;
+
+      const title = card.querySelector(".edit-title").value.trim();
+      const description = card.querySelector(".edit-desc").value.trim();
+      const prepRaw = card.querySelector(".edit-prep").value;
+      const ingredientsRaw = card.querySelector(".edit-ingredients").value;
+
+      const ingredients = ingredientsRaw
+        .split(",")
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      const payload = {
+        title,
+        description,
+        prep_time: prepRaw === "" ? null : Number(prepRaw),
+        ingredients
+      };
+
+      try {
+        const res = await fetch(`/recipes/${recipeId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.status === 401) {
+          window.location.href = "/login/login.html";
+          return;
+        }
+
+        const data = await res.json();
+
+        if (!data.ok) {
+          alert(data.message || "Update failed.");
+          return;
+        }
+
+        const idx = allRecipes.findIndex(r => String(r.id) === String(recipeId));
+        if (idx !== -1) {
+          allRecipes[idx] = {
+            ...allRecipes[idx],
+            ...payload
+          };
+        }
+
+        renderAfterEdit();
+
+      } catch (err) {
+        console.error(err);
+        alert("Server error.");
+      }
+    }
+
+    function renderAfterEdit() {
+      const value = document.getElementById("timeFilter").value;
+
+      if (!value) {
+        renderRecipes(allRecipes);
+      } else {
+        filterByTime();
+      }
+    }
+
   </script>
 </body>
 </html>
