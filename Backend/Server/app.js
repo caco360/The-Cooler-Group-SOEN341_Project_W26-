@@ -171,7 +171,7 @@ app.get("/my-recipes", async (req, res) => {
 
   const { data, error } = await supabase
     .from("Recipes")
-    .select("id, title, description, prep_time, ingredients")
+    .select("id, title, description, prep_time, ingredients,cost")
     .eq("user_id", userId)
     .order("id", { ascending: false });
 
@@ -219,6 +219,77 @@ app.delete("/recipes/:id", async (req, res) => {
 
   return res.json({ ok: true });
 });
+
+app.post("/recipes", async (req, res) => {
+  const userId=req.session.userId;
+  if(!userId){
+    return res.status(401).json({ ok: false, message: "Not logged in" });
+  }
+
+  let{title,description="",prep_time=null,ingredients=[],cost=null}=req.body;
+
+  if(!title|| typeof title !== "string" || !title.trim()){
+    return res.status(400).json({ok:false,message:"Title is required"})
+  }
+title = title.trim();
+description = typeof description === "string" ? description.trim() : "";
+
+if(prep_time!=null){
+  const time = Number(prep_time); //cast to integer
+  if(!Number.isFinite(time) || time<0){
+    return res.status(400).json({ok:false,message:"Invalid prep time"})
+  }
+  prep_time=time;
+}
+
+if(cost!=null){
+  const temp_cost = Number(cost); //cast to integer
+  if(!Number.isFinite(temp_cost) || temp_cost<0){
+    return res.status(400).json({ok:false,message:"Invalid cost"})
+  }
+  cost=temp_cost;
+}
+ if (!Array.isArray(ingredients)) {
+    return res.status(400).json({
+      ok: false,
+      message: "Ingredients must be an array"
+    });
+  }
+ingredients = ingredients.map(x => String(x).trim());
+
+try{
+  const{data,err} = await supabase.from("Recipes").insert([{
+    user_id:userId,
+    title,
+    description,
+    prep_time,
+    ingredients,
+    cost
+  }])
+  .select().single();
+  if (err) {
+      console.error(err);
+      return res.status(500).json({
+        ok: false,
+        message: "Insert failed"
+      });
+    }
+
+    return res.status(201).json({
+      ok: true,
+      recipe: data
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      ok: false,
+      message: "Server error"
+    });
+  }
+
+});
+
 
 // ===============================
 // Add Allergy or Diet Option
