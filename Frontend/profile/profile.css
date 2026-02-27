@@ -189,13 +189,12 @@ footer {
 }
 
 #saveBtn {
-  background: linear-gradient(135deg,#f3b83e,#91380c);
-  color: #1c1c1c;
+  background: #f3b83e;
+  color: white;
   border: none;
   padding: 13px 26px;
   border-radius: 12px;
   font-weight: 600;
-  cursor: pointer;
   transition: 0.25s;
 }
 
@@ -208,3 +207,36 @@ footer {
   font-size: 14px;
   color: #91380c;
 }
+
+#logoutBtn {
+  background: linear-gradient(135deg,#f3b83e,#91380c);
+  color: white;
+  border: none;
+  padding: 13px 26px;
+  border-radius: 12px;
+  font-weight: 600;
+  transition: 0.25s;
+}
+
+#logoutBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+  background:#91380c;
+}
+
+#deleteBtn {
+  background:#91380c;
+  color: white;
+  border: none;
+  padding: 13px 26px;
+  border-radius: 12px;
+  font-weight: 600;
+  transition: 0.25s;
+}
+
+#deleteBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+  background: red;
+}
+

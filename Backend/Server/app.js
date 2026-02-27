@@ -427,4 +427,15 @@ app.post("/profile-data", async (req, res) => {
   return res.json({ ok: true });
 });
 
+// logout code
+app.post("/logout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ ok: false, message: "Server error" });
+    }
+    res.clearCookie("connect.sid"); 
+    return res.json({ ok: true });
+  });
+});
+
 export default app;
