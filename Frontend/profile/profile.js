@@ -1,4 +1,4 @@
-console.log("profile.js loaded ✅");
+console.log("profile.js loaded");
 
 document.addEventListener("DOMContentLoaded", init);
 
@@ -231,4 +231,25 @@ async function addOption(type, name) {
   catch {
     alert("Server error");
   }
+}
+
+/* ======================
+   SIGN OUT BUTTON LOGIC
+====================== */
+
+const logoutBtn = document.getElementById("logoutBtn");
+
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", async () => {
+    try {
+      const response = await fetch("/logout", { method: "POST" });
+      const data = await response.json();
+
+      if (data.ok) {
+        window.location.href = "/login/login.html"; 
+      }
+    } catch (error) {
+      console.error("Server Error", error);
+    }
+  });
 }
