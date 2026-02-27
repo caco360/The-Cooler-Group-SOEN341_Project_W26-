@@ -24,6 +24,12 @@ const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, "../../Frontend"))); 
 
 
+// Serve the main homepage at root -> Frontend/Home/index.html
+app.get("/", (req, res) => {
+  return res.sendFile(path.join(__dirname, "../../Frontend/Home/index.html"));
+});
+
+
 app.get("/health", (req, res) =>{
   res.status(200).json({ok:true});
 });
@@ -171,7 +177,7 @@ app.get("/my-recipes", async (req, res) => {
 
   const { data, error } = await supabase
     .from("Recipes")
-    .select("id, title, description, prep_time, ingredients,cost")
+    .select("id, title, description, prep_time, ingredients, cost")
     .eq("user_id", userId)
     .order("id", { ascending: false });
 
@@ -219,6 +225,44 @@ app.delete("/recipes/:id", async (req, res) => {
 
   return res.json({ ok: true });
 });
+// ===============================
+// Update a recipe (only if owned by user)
+// ===============================
+app.put("/recipes/:id", async (req, res) => {
+
+  const userId = req.session.userId;
+
+  if (!userId) {
+    return res.status(401).json({ ok: false, message: "Not logged in" });
+  }
+
+  const recipeId = Number(req.params.id);
+
+  if (!Number.isFinite(recipeId)) {
+    return res.status(400).json({ ok: false, message: "Invalid recipe id" });
+  }
+
+  const { title, description, prep_time, ingredients } = req.body;
+
+  const { error } = await supabase
+    .from("Recipes")
+    .update({
+      title,
+      description,
+      prep_time,
+      ingredients
+    })
+    .eq("id", recipeId)
+    .eq("user_id", userId);   // very important: ownership check
+
+  if (error) {
+    console.error(error);
+    return res.status(500).json({ ok: false, message: "Server error" });
+  }
+
+  return res.json({ ok: true });
+});
+
 
 app.post("/recipes", async (req, res) => {
   const userId=req.session.userId;

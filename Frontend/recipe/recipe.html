@@ -29,6 +29,14 @@
         <div class="header-left">
           <h1>Recipes</h1>
           <p id="subtitle">Your saved recipes will appear here</p>
+
+          <div class="search-wrap">
+            <input id="recipeSearch" type="search" placeholder="Search recipes by name" aria-label="Search recipes" />
+          </div>
+
+          <div class="search-actions">
+            <button id="filterBtn" class="btn-secondary" type="button">Filter</button>
+          </div>
         </div>
 
         <div class="header-actions">
@@ -64,6 +72,541 @@
     </main>
   </div>
 
-  <script src="recipe.js"> </script>
+<script>
+document.addEventListener("DOMContentLoaded", init);
+
+function init() {
+
+  document.getElementById("refreshBtn").addEventListener("click", loadRecipes);
+
+  const searchEl = document.getElementById("recipeSearch");
+
+  function debounce(fn, wait = 200) {
+    let t;
+    return (...args) => {
+      clearTimeout(t);
+      t = setTimeout(() => fn(...args), wait);
+    };
+  }
+
+  const onSearch = debounce(() => {
+    const q = (searchEl.value || "").trim();
+    renderRecipes(window._recipes || [], q);
+  }, 200);
+
+  searchEl.addEventListener("input", onSearch);
+
+  const filterBtn = document.getElementById("filterBtn");
+
+  if (filterBtn) {
+    filterBtn.addEventListener("click", () => {
+
+      const modal = document.getElementById("filterModal");
+      const nameField = document.getElementById("filterName");
+      const costMinField = document.getElementById("filterCostMin");
+      const costMaxField = document.getElementById("filterCostMax");
+      const timeMinField = document.getElementById("filterTimeMin");
+      const timeMaxField = document.getElementById("filterTimeMax");
+
+      nameField.value = (searchEl.value || "").trim();
+      costMinField.value = "";
+      costMaxField.value = "";
+      timeMinField.value = "";
+      timeMaxField.value = "";
+
+      modal.classList.add("open");
+      nameField.focus();
+    });
+  }
+
+  searchEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const q = (searchEl.value || "").trim();
+      renderRecipes(window._recipes || [], q);
+    }
+  });
+
+  const modal = document.getElementById("filterModal");
+  const nameField = document.getElementById("filterName");
+  const costMinField = document.getElementById("filterCostMin");
+  const costMaxField = document.getElementById("filterCostMax");
+  const timeMinField = document.getElementById("filterTimeMin");
+  const timeMaxField = document.getElementById("filterTimeMax");
+  const applyBtn = document.getElementById("applyFilterBtn");
+  const cancelBtn = document.getElementById("cancelFilterBtn");
+
+  function closeModal() {
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden", "true");
+  }
+
+  applyBtn.addEventListener("click", () => {
+
+    const nameQ = (nameField.value || "").trim();
+
+    const min = costMinField.value === "" ? null : costMinField.value;
+    const max = costMaxField.value === "" ? null : costMaxField.value;
+
+    const tMin = timeMinField.value === "" ? null : timeMinField.value;
+    const tMax = timeMaxField.value === "" ? null : timeMaxField.value;
+
+    const mainSearch = document.getElementById("recipeSearch");
+    mainSearch.value = nameQ;
+
+    closeModal();
+
+    renderRecipes(window._recipes || [], nameQ, min, max, false, tMin, tMax);
+
+    filterBtn.focus();
+  });
+
+  cancelBtn.addEventListener("click", () => {
+
+    closeModal();
+
+    nameField.value = "";
+    costMinField.value = "";
+    costMaxField.value = "";
+    timeMinField.value = "";
+    timeMaxField.value = "";
+
+    const mainSearch = document.getElementById("recipeSearch");
+    mainSearch.value = "";
+
+    renderRecipes(window._recipes || [], "", null, null);
+
+    filterBtn.focus();
+  });
+
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeModal();
+  });
+
+  loadRecipes();
+}
+
+function escapeHtml(str) {
+  return String(str ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+async function loadRecipes() {
+
+  const statusEl = document.getElementById("status");
+  const grid = document.getElementById("recipesGrid");
+
+  statusEl.classList.remove("error");
+  statusEl.textContent = "Loading...";
+  grid.innerHTML = "";
+
+  const meRes = await fetch("/me");
+  if (meRes.status === 401) {
+    window.location.href = "/login/login.html";
+    return;
+  }
+
+  try {
+
+    const res = await fetch("/my-recipes");
+
+    if (res.status === 401) {
+      window.location.href = "/login/login.html";
+      return;
+    }
+
+    const data = await res.json();
+
+    if (!data.ok) {
+      statusEl.classList.add("error");
+      statusEl.textContent = "Could not load recipes.";
+      return;
+    }
+
+    const recipes = data.recipes || [];
+
+    window._recipes = recipes;
+
+    if (!recipes.length) {
+      statusEl.textContent = "No recipes saved yet.";
+      grid.innerHTML = "";
+      return;
+    }
+
+    statusEl.textContent = "";
+    renderRecipes(recipes, "", null, null);
+
+  } catch (err) {
+    console.error(err);
+    statusEl.classList.add("error");
+    statusEl.textContent = "Server error.";
+  }
+}
+
+function renderRecipes(
+  recipes,
+  query = "",
+  costMin = null,
+  costMax = null,
+  useOr = false,
+  timeMin = null,
+  timeMax = null
+) {
+
+  const statusEl = document.getElementById("status");
+  const grid = document.getElementById("recipesGrid");
+
+  const q = (query || "").trim().toLowerCase();
+
+  const nameFilterActive = Boolean(q);
+  const costFilterActive =
+    ((costMin !== null && costMin !== "") || (costMax !== null && costMax !== ""));
+
+  const minN = (costMin === null || costMin === "") ? null : Number(costMin);
+  const maxN = (costMax === null || costMax === "") ? null : Number(costMax);
+
+  const filtered = recipes.filter(r => {
+
+    const nameMatch = nameFilterActive
+      ? ((r.title || "").toLowerCase().includes(q))
+      : false;
+
+    let costMatch = false;
+
+    if (costFilterActive) {
+
+      const val = (r.cost ?? null);
+
+      if (val !== null && val !== undefined && val !== "") {
+
+        const num = Number(val);
+
+        if (Number.isFinite(num)) {
+
+          if (minN !== null && !Number.isNaN(minN) && num < minN) costMatch = false;
+          else if (maxN !== null && !Number.isNaN(maxN) && num > maxN) costMatch = false;
+          else costMatch = true;
+
+        }
+      }
+    }
+
+    /* ----------- FIXED TIME FILTER ----------- */
+const timeFilterActive =
+  (timeMin !== null && timeMin !== "") ||
+  (timeMax !== null && timeMax !== "");
+
+let timeMatch = true;
+
+if (timeFilterActive) {
+  const t = Number(r.prep_time);
+
+  // If prep_time is missing/invalid → fail the time filter cleanly
+  if (Number.isNaN(t)) timeMatch = false;
+
+  const tMinN = timeMin === "" || timeMin === null ? null : Number(timeMin);
+  const tMaxN = timeMax === "" || timeMax === null ? null : Number(timeMax);
+
+  if (tMinN !== null && t < tMinN) timeMatch = false;
+  if (tMaxN !== null && t > tMaxN) timeMatch = false;
+}
+/* ----------------------------------------- */
+
+    return (
+      (
+        useOr
+          ? (
+              (nameFilterActive && nameMatch) ||
+              (costFilterActive && costMatch)
+            )
+          : (
+              (!nameFilterActive || nameMatch) &&
+              (!costFilterActive || costMatch)
+            )
+      )
+      && timeMatch
+    );
+
+  });
+
+  if (!filtered.length) {
+
+    if (!recipes.length) statusEl.textContent = "No recipes saved yet.";
+    else statusEl.textContent = "No recipes match your search.";
+
+    grid.innerHTML = "";
+    return;
+  }
+
+  statusEl.textContent = "";
+
+  grid.innerHTML = filtered.map(r => {
+
+    const title = escapeHtml(r.title || "Untitled");
+    const desc = r.description ? escapeHtml(r.description) : "";
+
+    const prep =
+      (r.prep_time === null || r.prep_time === undefined || r.prep_time === "")
+        ? "—"
+        : `${escapeHtml(r.prep_time)} min`;
+
+    const ingredients = Array.isArray(r.ingredients) ? r.ingredients : [];
+
+    const ingHtml = ingredients.length
+      ? ingredients.map(i => `<span class="ingredient-pill">${escapeHtml(i)}</span>`).join("")
+      : `<span class="muted">No ingredients listed</span>`;
+
+    return `
+      <article class="recipe-card" data-id="${r.id}">
+        <div class="recipe-top">
+          <div class="title-wrap">
+            <h3 class="recipe-title">${title}</h3>
+            <span class="prep-badge">${prep}</span>
+          </div>
+
+          <div class="card-actions">
+            <button class="btn-secondary" type="button" data-action="edit" data-id="${r.id}">Edit</button>
+            <button class="btn-danger" type="button" data-action="delete" data-id="${r.id}">Delete</button>
+          </div>
+        </div>
+
+        <p class="recipe-desc ${desc ? "" : "muted"}">
+          ${desc || "No description"}
+        </p>
+
+        <div class="ingredients-block">
+          <div class="ingredients-label">Ingredients</div>
+          <div class="ingredients-pills">
+            ${ingHtml}
+          </div>
+        </div>
+      </article>
+    `;
+  }).join("");
+
+  grid.querySelectorAll('button[data-action="delete"]').forEach(btn => {
+    btn.addEventListener("click", () => deleteRecipe(btn.dataset.id));
+  });
+
+  grid.querySelectorAll('button[data-action="edit"]').forEach(btn => {
+    btn.addEventListener("click", () => startEdit(btn.dataset.id));
+  });
+}
+
+async function deleteRecipe(recipeId) {
+
+  const ok = confirm("Delete this recipe?");
+  if (!ok) return;
+
+  try {
+
+    const res = await fetch(`/recipes/${recipeId}`, { method: "DELETE" });
+
+    if (res.status === 401) {
+      window.location.href = "/login/login.html";
+      return;
+    }
+
+    const data = await res.json();
+
+    if (!data.ok) {
+      alert(data.message || "Delete failed.");
+      return;
+    }
+
+    window._recipes = window._recipes.filter(r => String(r.id) !== String(recipeId));
+
+    const q = (document.getElementById("recipeSearch").value || "").trim();
+    renderRecipes(window._recipes, q);
+
+  } catch (err) {
+    console.error(err);
+    alert("Server error.");
+  }
+}
+
+function startEdit(recipeId) {
+
+  const card = document.querySelector(`.recipe-card[data-id="${recipeId}"]`);
+  const recipe = (window._recipes || []).find(r => r.id == recipeId);
+
+  if (!card || !recipe) return;
+
+  const titleEl = card.querySelector(".recipe-title");
+  const descEl  = card.querySelector(".recipe-desc");
+  const prepEl  = card.querySelector(".prep-badge");
+
+  titleEl.outerHTML =
+    `<input class="edit-title" value="${escapeHtml(recipe.title || "")}">`;
+
+  descEl.outerHTML =
+    `<textarea class="edit-desc" rows="2">${escapeHtml(recipe.description || "")}</textarea>`;
+
+  prepEl.outerHTML =
+    `<span class="prep-badge">
+       <input class="edit-prep" type="number" value="${recipe.prep_time ?? ""}" style="width:60px"> min
+     </span>`;
+
+  const ingBlock = card.querySelector(".ingredients-pills");
+
+  const ingValue = (Array.isArray(recipe.ingredients) ? recipe.ingredients : []).join(", ");
+
+  ingBlock.innerHTML =
+    `<input class="edit-ingredients" value="${escapeHtml(ingValue)}">`;
+
+  const actions = card.querySelector(".card-actions");
+
+  actions.insertAdjacentHTML(
+    "afterbegin",
+    `<button class="btn-secondary" type="button" data-action="save" data-id="${recipeId}">Save</button>`
+  );
+
+  actions.querySelector('button[data-action="edit"]').remove();
+
+  actions.querySelector('button[data-action="save"]').addEventListener("click", () => {
+    saveRecipe(card);
+  });
+}
+
+async function saveRecipe(card) {
+
+  const id = card.dataset.id;
+
+  const payload = {
+    title: card.querySelector(".edit-title").value.trim(),
+    description: card.querySelector(".edit-desc").value.trim(),
+    prep_time: Number(card.querySelector(".edit-prep").value),
+    ingredients: card.querySelector(".edit-ingredients")
+      .value.split(",")
+      .map(v => v.trim())
+      .filter(Boolean)
+  };
+
+  try {
+
+    const res = await fetch(`/recipes/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.status === 401) {
+      window.location.href = "/login/login.html";
+      return;
+    }
+
+    const data = await res.json();
+
+    if (!data.ok) {
+      alert("Update failed.");
+      return;
+    }
+
+    const idx = window._recipes.findIndex(r => r.id == id);
+    if (idx !== -1) {
+      window._recipes[idx] = { ...window._recipes[idx], ...payload };
+    }
+
+    const q = (document.getElementById("recipeSearch").value || "").trim();
+    renderRecipes(window._recipes, q);
+
+  } catch (e) {
+    console.error(e);
+    alert("Server error.");
+  }
+}
+</script>
+
+<!-- Filter modal -->
+<div id="filterModal" class="modal" aria-hidden="true">
+  <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="filterTitle">
+    <h3 id="filterTitle">Filter recipes</h3>
+
+    <label for="filterName">Name contains</label>
+    <input id="filterName" type="text" placeholder="Recipe name" />
+    <div class="filter-section">
+      <label>Difficulty</label>
+      <div class="filter-group" role="group" aria-label="Difficulty">
+        <input type="checkbox" id="any" class="filter-check" />
+        <label for="any" class="filter-label">Any</label>
+
+        <input type="checkbox" id="easy" class="filter-check" />
+        <label for="easy" class="filter-label">Easy</label>
+
+        <input type="checkbox" id="medium" class="filter-check" />
+        <label for="medium" class="filter-label">Medium</label>
+
+        <input type="checkbox" id="hard" class="filter-check" />
+        <label for="hard" class="filter-label">Hard</label>
+      </div>
+    </div>
+
+    <!---Diet preferences filter-->
+    <label>Diet preferences</label>
+
+<div class="filter-group" role="group" aria-label="Diet preferences">
+  <input type="checkbox" id="dietVegetarian" class="filter-check" />
+  <label for="dietVegetarian" class="filter-label">Vegetarian</label>
+
+  <input type="checkbox" id="dietVegan" class="filter-check" />
+  <label for="dietVegan" class="filter-label">Vegan</label>
+
+  <input type="checkbox" id="dietPescatarian" class="filter-check" />
+  <label for="dietPescatarian" class="filter-label">Pescatarian</label>
+
+  <input type="checkbox" id="dietGlutenFree" class="filter-check" />
+  <label for="dietGlutenFree" class="filter-label">Gluten-Free</label>
+
+  <input type="checkbox" id="dietDairyFree" class="filter-check" />
+  <label for="dietDairyFree" class="filter-label">Dairy-Free</label>
+
+  <input type="checkbox" id="dietNutFree" class="filter-check" />
+  <label for="dietNutFree" class="filter-label">Nut-Free</label>
+
+  <input type="checkbox" id="dietEggFree" class="filter-check" />
+  <label for="dietEggFree" class="filter-label">Egg-Free</label>
+
+  <input type="checkbox" id="dietKosher" class="filter-check" />
+  <label for="dietKosher" class="filter-label">Kosher</label>
+
+  <input type="checkbox" id="dietKeto" class="filter-check" />
+  <label for="dietKeto" class="filter-label">Keto</label>
+</div>
+
+
+    <div style="height:8px"></div>
+
+    <label>Cost range</label>
+    <div class="cost-row">
+      <input id="filterCostMin" type="number" step="0.01" placeholder="Min" />
+      <span class="cost-sep">—</span>
+      <input id="filterCostMax" type="number" step="0.01" placeholder="Max" />
+    </div>
+
+    <div style="height:10px"></div>
+
+    <!-- prep time filter -->
+    <label>Prep time (minutes)</label>
+    <div class="cost-row">
+      <input id="filterTimeMin" type="number" placeholder="Min" />
+      <span class="cost-sep">—</span>
+      <input id="filterTimeMax" type="number" placeholder="Max" />
+    </div>
+
+    <div class="modal-actions">
+      <button id="applyFilterBtn" class="btn-secondary" type="button">Apply</button>
+      <button id="cancelFilterBtn" class="btn-danger" type="button">Cancel</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
