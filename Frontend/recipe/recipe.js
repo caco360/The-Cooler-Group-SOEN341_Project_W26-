@@ -63,6 +63,7 @@ document.addEventListener("DOMContentLoaded", init);
             : `${escapeHtml(r.prep_time)} min`;
 
           const ingredients = Array.isArray(r.ingredients) ? r.ingredients : [];
+          const cost = (r.cost === null || r.cost === undefined) ? "—" : `$${escapeHtml(r.cost)}`;
           const ingHtml = ingredients.length
             ? ingredients.map(i => `<span class="ingredient-pill">${escapeHtml(i)}</span>`).join("")
             : `<span class="muted">No ingredients listed</span>`;
@@ -73,6 +74,7 @@ document.addEventListener("DOMContentLoaded", init);
                 <div class="title-wrap">
                   <h3 class="recipe-title">${title}</h3>
                   <span class="prep-badge">${prep}</span>
+                  <span class ="prep-badge">${cost}</span>
                 </div>
 
                 <div class="card-actions">
@@ -148,6 +150,7 @@ document.addEventListener("DOMContentLoaded", init);
         const description = document.getElementById("descInput").value.trim();
         const prep_time = document.getElementById("prepInput").value;
         const ingredientsRaw = document.getElementById("ingredientsInput").value;
+        const cost = document.getElementById("costInput").value;
 
         if (!title) {
             msg.textContent = "Title required";
@@ -167,7 +170,8 @@ document.addEventListener("DOMContentLoaded", init);
             title,
             description,
             prep_time: prep_time ? Number(prep_time) : null,
-            ingredients
+            ingredients,
+            cost: cost ? Number(cost) : null,
             }) 
         });
 
@@ -182,6 +186,7 @@ document.addEventListener("DOMContentLoaded", init);
         document.getElementById("descInput").value = "";
         document.getElementById("prepInput").value = "";
         document.getElementById("ingredientsInput").value = "";
+        document.getElementById("costInput").value = "";
         loadRecipes();
 
         }catch(err){

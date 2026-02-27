@@ -171,7 +171,7 @@ app.get("/my-recipes", async (req, res) => {
 
   const { data, error } = await supabase
     .from("Recipes")
-    .select("id, title, description, prep_time, ingredients")
+    .select("id, title, description, prep_time, ingredients,cost")
     .eq("user_id", userId)
     .order("id", { ascending: false });
 
@@ -226,7 +226,7 @@ app.post("/recipes", async (req, res) => {
     return res.status(401).json({ ok: false, message: "Not logged in" });
   }
 
-  let{title,description="",prep_time=null,ingredients=[]}=req.body;
+  let{title,description="",prep_time=null,ingredients=[],cost=null}=req.body;
 
   if(!title|| typeof title !== "string" || !title.trim()){
     return res.status(400).json({ok:false,message:"Title is required"})
@@ -242,6 +242,13 @@ if(prep_time!=null){
   prep_time=time;
 }
 
+if(cost!=null){
+  const temp_cost = Number(cost); //cast to integer
+  if(!Number.isFinite(temp_cost) || temp_cost<0){
+    return res.status(400).json({ok:false,message:"Invalid cost"})
+  }
+  cost=temp_cost;
+}
  if (!Array.isArray(ingredients)) {
     return res.status(400).json({
       ok: false,
@@ -256,7 +263,8 @@ try{
     title,
     description,
     prep_time,
-    ingredients
+    ingredients,
+    cost
   }])
   .select().single();
   if (err) {
