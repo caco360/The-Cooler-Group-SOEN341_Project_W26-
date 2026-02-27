@@ -542,4 +542,45 @@ app.post("/profile-data", async (req, res) => {
   return res.json({ ok: true });
 });
 
+// logout code
+app.post("/logout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ ok: false, message: "Server error" });
+    }
+    res.clearCookie("connect.sid"); 
+    return res.json({ ok: true });
+  });
+});
+
+// Delete Account
+app.delete("/api/delete-account", async (req, res) => {
+  const userId = req.session.userId;
+
+  if (!userId) {
+    return res.status(401).json({ ok: false, message: "Not logged in" });
+  }
+
+  try {
+    // Erase user from Supabase 'User' table
+    const { error } = await supabase
+      .from("User")
+      .delete()
+      .eq("id", userId);
+
+    if (error) throw error;
+
+    // Destroy the session so the user is fully logged out
+    req.session.destroy((err) => {
+      if (err) console.error("Session cleanup error:", err);
+      res.clearCookie("connect.sid");
+      return res.json({ ok: true });
+    });
+
+  } catch (err) {
+    console.error("DELETE ERROR:", err);
+    return res.status(500).json({ ok: false, message: "Server error during deletion" });
+  }
+});
+
 export default app;
