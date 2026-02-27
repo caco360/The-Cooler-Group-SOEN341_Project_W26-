@@ -400,40 +400,4 @@ section h2 {
 }
 /* =========================
 Difficulty
-========================= */
-.filter-group{
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items:center ;
-}
-
-/* hide checkbox */
-.filter-check{
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* default “cost-like” button */
-.filter-label{
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 14px;
-  border: 1px solid #e5e5e5;
-  border-radius: 12px;
-  background: #fff;
-  color: #444;
-  cursor: pointer;
-  user-select: none;
-  transition: background .15s ease, color .15s ease, border-color .15s ease;
-  white-space: nowrap;
-}
-
-/* selected */
-.filter-check:checked + .filter-label{
-  background: #f2c94c;
-  border-color: #f2c94c;
-  color: #fff;
 }

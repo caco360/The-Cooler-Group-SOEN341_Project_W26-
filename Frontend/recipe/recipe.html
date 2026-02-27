@@ -44,6 +44,22 @@
         </div>
       </header>
 
+      <section class="add-recipes-section">
+          <h2>Add A New Recipe</h2>
+          <div class="recipe-form">
+
+            <input type="text" id="titleInput" placeholder="Recipe title" />
+            <input type="number" id="prepInput" placeholder="Prep time (minutes)" min="0" />
+            <input type="number" id="costInput" placeholder="Cost ($)" min="0" step="0.01" />
+            <textarea id="descInput" placeholder="Description"></textarea>
+            <textarea id="ingredientsInput" placeholder="Ingredients (one per line)"></textarea>
+            <button id="addRecipeBtn" class="btn-secondary" type="button"> Add Recipe </button>
+
+            <span id="createMsg" class="status"></span>
+          </div>
+
+      </section>
+      
       <section class="recipes-section">
         <div class="section-top">
           <h2>Your Recipes</h2>
