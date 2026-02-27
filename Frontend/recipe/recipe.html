@@ -516,6 +516,63 @@ async function saveRecipe(card) {
 
     <label for="filterName">Name contains</label>
     <input id="filterName" type="text" placeholder="Recipe name" />
+    <div class="filter-section">
+      <label>Difficulty</label>
+      <div class="filter-group" role="group" aria-label="Difficulty">
+        <input type="checkbox" id="any" class="filter-check" />
+        <label for="any" class="filter-label">Any</label>
+
+        <input type="checkbox" id="easy" class="filter-check" />
+        <label for="easy" class="filter-label">Easy</label>
+
+        <input type="checkbox" id="medium" class="filter-check" />
+        <label for="medium" class="filter-label">Medium</label>
+
+        <input type="checkbox" id="hard" class="filter-check" />
+        <label for="hard" class="filter-label">Hard</label>
+      </div>
+    </div>
+
+    <div class="filter-section">
+      <label>Cost range</label>
+      <div class="cost-row">
+        <input id="filterCostMin" type="number" step="1" min="0" placeholder="Min" />
+        <span class="cost-sep" aria-hidden="true">—</span>
+        <input id="filterCostMax" type="number" step="1" min="0" placeholder="Max" />
+      </div>
+    </div>
+    <!---Diet preferences filter-->
+    <label>Diet preferences</label>
+
+<div class="filter-group" role="group" aria-label="Diet preferences">
+  <input type="checkbox" id="dietVegetarian" class="filter-check" />
+  <label for="dietVegetarian" class="filter-label">Vegetarian</label>
+
+  <input type="checkbox" id="dietVegan" class="filter-check" />
+  <label for="dietVegan" class="filter-label">Vegan</label>
+
+  <input type="checkbox" id="dietPescatarian" class="filter-check" />
+  <label for="dietPescatarian" class="filter-label">Pescatarian</label>
+
+  <input type="checkbox" id="dietGlutenFree" class="filter-check" />
+  <label for="dietGlutenFree" class="filter-label">Gluten-Free</label>
+
+  <input type="checkbox" id="dietDairyFree" class="filter-check" />
+  <label for="dietDairyFree" class="filter-label">Dairy-Free</label>
+
+  <input type="checkbox" id="dietNutFree" class="filter-check" />
+  <label for="dietNutFree" class="filter-label">Nut-Free</label>
+
+  <input type="checkbox" id="dietEggFree" class="filter-check" />
+  <label for="dietEggFree" class="filter-label">Egg-Free</label>
+
+  <input type="checkbox" id="dietKosher" class="filter-check" />
+  <label for="dietKosher" class="filter-label">Kosher</label>
+
+  <input type="checkbox" id="dietKeto" class="filter-check" />
+  <label for="dietKeto" class="filter-label">Keto</label>
+</div>
+
 
     <div style="height:8px"></div>
 

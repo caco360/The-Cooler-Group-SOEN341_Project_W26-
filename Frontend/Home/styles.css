@@ -189,16 +189,62 @@ body {
 }
 .cta-button {
     margin-top: 1rem;
-    padding: 0.75rem 2rem;
+    /* Increased padding and font-size by ~40% */
+    padding: 1.05rem 2.8rem; 
+    font-size: 2.1rem; 
+    
     font-family: 'DM Serif Display', serif;
-    font-size: 1.5rem;
     font-weight: 500;
     color: #0f0e11;
     background-color: #E6B82E;
     border: none;
-    border-radius: 80px;
+    border-radius: 130px;
     cursor: pointer;
+    text-decoration: none; /* Removes underline */
+    display: inline-block;
+    position: relative;
+    overflow: hidden; /* Important to contain the shimmer */
     transition: all 0.3s ease;
+    z-index: 1;
+}
+
+/* The Gold Shimmer Layer */
+.cta-button::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.4), /* Shimmer highlight */
+        transparent
+    );
+    transform: skewX(-20deg);
+    animation: shimmer-gold 3s infinite;
+    z-index: 2;
+}
+
+.cta-button:hover {
+    box-shadow: #D4A628 0px 5px 30px;
+    color: #0f0e11;
+    transform: translateY(-3px) scale(1.02);
+    text-decoration: none; /* Ensures no underline on hover */
+}
+
+/* Animation for the shimmer move */
+@keyframes shimmer-gold {
+    0% {
+        left: -100%;
+    }
+    30% {
+        left: 150%;
+    }
+    100% {
+        left: 150%;
+    }
 }
 
 .cta-button:hover {

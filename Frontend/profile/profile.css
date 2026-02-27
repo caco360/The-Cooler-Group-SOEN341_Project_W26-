@@ -31,10 +31,13 @@ body {
 }
 
 .logo {
-  font-size: 22px;
-  font-weight: 600;
+  font-size: 38px;
+  font-weight: 400;
   color: #f3b83e;
   margin-bottom: 40px;
+  font-family:'DM Serif Display', serif;
+  font-style:italic;
+  letter-spacing: -2px;
 }
 
 .sidebar nav {
