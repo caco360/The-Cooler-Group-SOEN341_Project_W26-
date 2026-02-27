@@ -14,6 +14,10 @@ function init() {
     .addEventListener("click", saveProfile);
 
   document
+    .getElementById("deleteBtn")
+    .addEventListener("click", handleDeleteAccount);
+
+  document
     .getElementById("addAllergyBtn")
     .addEventListener("click", addAllergy);
 
@@ -252,4 +256,38 @@ if (logoutBtn) {
       console.error("Server Error", error);
     }
   });
+}
+
+/* ============================
+   DELETE ACCOUNT BUTTON LOGIC
+=============================== */
+
+async function handleDeleteAccount() {
+  // Basic confirmation
+  const firstConfirm = confirm("Are you sure you want to delete your account? This action is permanent.");
+  if (!firstConfirm) return;
+
+  // Typed confirmation
+  const finalCheck = prompt("To confirm, please type 'DELETE' in all caps below:");
+  
+  if (finalCheck !== "DELETE") {
+    alert("Incorrect text entered. Deletion cancelled.");
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/delete-account", { method: "DELETE" });
+    const data = await response.json();
+
+    if (data.ok) {
+      alert("Your account and data have been permanently removed.");
+      // Redirect
+      window.location.href = "/login/register.html"; 
+    } else {
+      alert("Error: " + data.message);
+    }
+  } catch (err) {
+    console.error("Delete request failed:", err);
+    alert("Network error. Could not delete account.");
+  }
 }
