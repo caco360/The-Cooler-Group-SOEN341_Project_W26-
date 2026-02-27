@@ -404,7 +404,7 @@ Difficulty
 .filter-group{
   display: flex;
   gap: 10px;
-  flex-wrap: nowrap;      /* stays one line */
+  flex-wrap: wrap;
   align-items:center ;
 }
 
