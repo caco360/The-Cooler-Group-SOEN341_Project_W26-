@@ -165,7 +165,6 @@ app.get("/me", (req, res) => {
 // Get Logged-In User Recipes
 // ===============================
 app.get("/my-recipes", async (req, res) => {
-
   const userId = req.session.userId;
 
   if (!userId) {
@@ -175,25 +174,48 @@ app.get("/my-recipes", async (req, res) => {
     });
   }
 
-  const { data, error } = await supabase
+  const { data: recipes, error: recipesError } = await supabase
     .from("Recipes")
-    .select("id, title, description, prep_time, ingredients, cost")
+    .select("id, title, description, prep_time, ingredients, cost, diet_id")
     .eq("user_id", userId)
     .order("id", { ascending: false });
 
-  if (error) {
-    console.error(error);
-    return res.status(500).json({
-      ok: false,
-      message: "Server error"
-    });
+  if (recipesError) {
+    console.error("recipesError:", recipesError);
+    return res.status(500).json({ ok: false, message: "Server error" });
   }
+
+  const dietIds = [...new Set(
+    (recipes || [])
+      .map(r => r.diet_id)
+      .filter(id => id != null)
+  )];
+
+  let dietMap = {};
+
+  if (dietIds.length) {
+    const { data: diets, error: dietsError } = await supabase
+      .from("diet_preferences")
+      .select("id, name")
+      .in("id", dietIds);
+
+    if (dietsError) {
+      console.error("dietsError:", dietsError);
+      return res.status(500).json({ ok: false, message: "Server error" });
+    }
+
+    dietMap = Object.fromEntries(diets.map(d => [d.id, d.name]));
+  }
+
+  const recipesWithDiet = (recipes || []).map(r => ({
+    ...r,
+    diet_name: r.diet_id ? (dietMap[r.diet_id] || null) : null
+  }));
 
   return res.json({
     ok: true,
-    recipes: data
+    recipes: recipesWithDiet
   });
-
 });
 
 // ===============================
@@ -270,7 +292,7 @@ app.post("/recipes", async (req, res) => {
     return res.status(401).json({ ok: false, message: "Not logged in" });
   }
 
-  let{title,description="",prep_time=null,ingredients=[],cost=null}=req.body;
+  let{title,description="",prep_time=null,ingredients=[],cost=null,diet_id=null}=req.body;
 
   if(!title|| typeof title !== "string" || !title.trim()){
     return res.status(400).json({ok:false,message:"Title is required"})
@@ -308,7 +330,8 @@ try{
     description,
     prep_time,
     ingredients,
-    cost
+    cost,
+    diet_id
   }])
   .select().single();
   if (err) {
@@ -581,6 +604,173 @@ app.delete("/api/delete-account", async (req, res) => {
     console.error("DELETE ERROR:", err);
     return res.status(500).json({ ok: false, message: "Server error during deletion" });
   }
+});
+
+app.get("/test-diet", async (req, res) => {
+  const { data, error } = await supabase
+    .from("Recipes")
+    .select(`
+      id,
+      title,
+      diet_id,
+      diet_preferences!Recipes_diet_id_fkey (
+        id,
+        name
+      )
+    `);
+
+
+
+  res.json({ data, error });
+});
+
+//-----------------Meal planner----------------------
+app.get("/meal-planner", async (req, res) => {
+  const userId = req.session.userId;
+
+  if (!userId) {
+    return res.status(401).json({ ok: false, message: "Not logged in" });
+  }
+
+  const { week_start_date } = req.query;
+
+  if (!week_start_date) {
+    return res.status(400).json({
+      ok: false,
+      message: "week_start_date is required"
+    });
+  }
+
+  const { data, error } = await supabase
+    .from("meal_planner")
+    .select(`
+      id,
+      week_start_date,
+      day_of_week,
+      meal_type,
+      recipe_id,
+      Recipes (
+        id,
+        title,
+        description,
+        prep_time,
+        cost
+      )
+    `)
+    .eq("user_id", userId)
+    .eq("week_start_date", week_start_date)
+    .order("day_of_week", { ascending: true });
+
+  if (error) {
+    console.error("MEAL PLANNER GET ERROR:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Server error"
+    });
+  }
+
+  return res.json({
+    ok: true,
+    meals: data
+  });
+});
+
+app.post("/meal-planner", async (req, res) => {
+  const userId = req.session.userId;
+
+  if (!userId) {
+    return res.status(401).json({ ok: false, message: "Not logged in" });
+  }
+
+  let { recipe_id, week_start_date, day_of_week, meal_type } = req.body;
+
+  if (!recipe_id || !week_start_date || !day_of_week || !meal_type) {
+    return res.status(400).json({
+      ok: false,
+      message: "recipe_id, week_start_date, day_of_week, and meal_type are required"
+    });
+  }
+
+  recipe_id = Number(recipe_id);
+  day_of_week = String(day_of_week).trim().toLowerCase();
+  meal_type = String(meal_type).trim().toLowerCase();
+
+  const validDays = [
+    "monday", "tuesday", "wednesday",
+    "thursday", "friday", "saturday", "sunday"
+  ];
+
+  const validMealTypes = ["breakfast", "lunch", "dinner", "snack"];
+
+  if (!Number.isFinite(recipe_id)) {
+    return res.status(400).json({
+      ok: false,
+      message: "Invalid recipe_id"
+    });
+  }
+
+  if (!validDays.includes(day_of_week)) {
+    return res.status(400).json({
+      ok: false,
+      message: "Invalid day_of_week"
+    });
+  }
+
+  if (!validMealTypes.includes(meal_type)) {
+    return res.status(400).json({
+      ok: false,
+      message: "Invalid meal_type"
+    });
+  }
+
+  // Optional but smart: make sure recipe belongs to logged-in user
+  const { data: recipe, error: recipeError } = await supabase
+    .from("Recipes")
+    .select("id")
+    .eq("id", recipe_id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (recipeError) {
+    console.error("RECIPE CHECK ERROR:", recipeError);
+    return res.status(500).json({
+      ok: false,
+      message: "Server error"
+    });
+  }
+
+  if (!recipe) {
+    return res.status(404).json({
+      ok: false,
+      message: "Recipe not found"
+    });
+  }
+
+  const { data, error } = await supabase
+    .from("meal_planner")
+    .insert([{
+      user_id: userId,
+      recipe_id,
+      week_start_date,
+      day_of_week,
+      meal_type
+    }])
+    .select()
+    .single();
+
+  if (error) {
+    console.error("MEAL PLANNER INSERT ERROR:", error);
+
+    return res.status(500).json({
+      ok: false,
+      message: error.message
+    });
+  }
+
+  return res.status(201).json({
+    ok: true,
+    meal: data
+  });
 });
 
 export default app;

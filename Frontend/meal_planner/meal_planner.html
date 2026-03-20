@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meal Planner</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="meal_planner.css">
+</head>
+
+<body>
+  <div class="app-layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h2 class="logo">Meal Major</h2>
+
+      <nav>
+        <a href="../profile/profile.html">Profile</a>
+        <a href="../recipe/recipe.html">Recipes</a>
+        <a href="meal-planner.html" class="active">Meal Planner</a>
+      </nav>
+    </aside>
+
+    <!-- Main -->
+    <main class="main-content">
+
+      <header class="page-header">
+        <div>
+          <h1>Meal Planner</h1>
+          <p>Plan your meals for the week</p>
+        </div>
+
+        <div class="week-controls">
+          <button id="prevWeekBtn" type="button">←</button>
+          <span id="weekLabel">Week of March 16, 2026</span>
+          <button id="nextWeekBtn" type="button">→</button>
+        </div>
+      </header>
+
+      <section class="planner-section">
+        <div class="planner-grid">
+
+          <div class="grid-cell header-cell"></div>
+          <div class="grid-cell header-cell">Mon</div>
+          <div class="grid-cell header-cell">Tue</div>
+          <div class="grid-cell header-cell">Wed</div>
+          <div class="grid-cell header-cell">Thu</div>
+          <div class="grid-cell header-cell">Fri</div>
+          <div class="grid-cell header-cell">Sat</div>
+          <div class="grid-cell header-cell">Sun</div>
+
+          <div class="grid-cell meal-label">Breakfast</div>
+          <div class="grid-cell meal-slot" data-day="monday" data-meal="breakfast"></div>
+          <div class="grid-cell meal-slot" data-day="tuesday" data-meal="breakfast"></div>
+          <div class="grid-cell meal-slot" data-day="wednesday" data-meal="breakfast"></div>
+          <div class="grid-cell meal-slot" data-day="thursday" data-meal="breakfast"></div>
+          <div class="grid-cell meal-slot" data-day="friday" data-meal="breakfast"></div>
+          <div class="grid-cell meal-slot" data-day="saturday" data-meal="breakfast"></div>
+          <div class="grid-cell meal-slot" data-day="sunday" data-meal="breakfast"></div>
+
+          <div class="grid-cell meal-label">Lunch</div>
+          <div class="grid-cell meal-slot" data-day="monday" data-meal="lunch"></div>
+          <div class="grid-cell meal-slot" data-day="tuesday" data-meal="lunch"></div>
+          <div class="grid-cell meal-slot" data-day="wednesday" data-meal="lunch"></div>
+          <div class="grid-cell meal-slot" data-day="thursday" data-meal="lunch"></div>
+          <div class="grid-cell meal-slot" data-day="friday" data-meal="lunch"></div>
+          <div class="grid-cell meal-slot" data-day="saturday" data-meal="lunch"></div>
+          <div class="grid-cell meal-slot" data-day="sunday" data-meal="lunch"></div>
+
+          <div class="grid-cell meal-label">Dinner</div>
+          <div class="grid-cell meal-slot" data-day="monday" data-meal="dinner"></div>
+          <div class="grid-cell meal-slot" data-day="tuesday" data-meal="dinner"></div>
+          <div class="grid-cell meal-slot" data-day="wednesday" data-meal="dinner"></div>
+          <div class="grid-cell meal-slot" data-day="thursday" data-meal="dinner"></div>
+          <div class="grid-cell meal-slot" data-day="friday" data-meal="dinner"></div>
+          <div class="grid-cell meal-slot" data-day="saturday" data-meal="dinner"></div>
+          <div class="grid-cell meal-slot" data-day="sunday" data-meal="dinner"></div>
+
+          <div class="grid-cell meal-label">Snack</div>
+          <div class="grid-cell meal-slot" data-day="monday" data-meal="snack"></div>
+          <div class="grid-cell meal-slot" data-day="tuesday" data-meal="snack"></div>
+          <div class="grid-cell meal-slot" data-day="wednesday" data-meal="snack"></div>
+          <div class="grid-cell meal-slot" data-day="thursday" data-meal="snack"></div>
+          <div class="grid-cell meal-slot" data-day="friday" data-meal="snack"></div>
+          <div class="grid-cell meal-slot" data-day="saturday" data-meal="snack"></div>
+          <div class="grid-cell meal-slot" data-day="sunday" data-meal="snack"></div>
+
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal -->
+  <div id="mealModal" class="modal hidden">
+    <div class="modal-box">
+      <h2>Add Meal</h2>
+
+      <form id="mealForm">
+        <input type="hidden" id="selectedDay" />
+
+        <div class="form-group">
+          <label for="mealTypeSelect">Meal Type</label>
+          <select id="mealTypeSelect" required>
+            <option value="">Select meal type</option>
+            <option value="breakfast">Breakfast</option>
+            <option value="lunch">Lunch</option>
+            <option value="dinner">Dinner</option>
+            <option value="snack">Snack</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="recipeSelect">Recipe</label>
+          <select id="recipeSelect" required>
+            <option value="">Select a recipe</option>
+          </select>
+        </div>
+
+        <div class="modal-actions">
+          <button type="submit">Save</button>
+          <button type="button" id="closeModalBtn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <script src="meal_planner.js"></script>
+</body>
+</html>
