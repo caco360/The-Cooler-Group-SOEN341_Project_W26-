@@ -146,9 +146,15 @@ async function saveProfile() {
 
 
   const payload = {
-    allergyIds: getCheckedIds("allergiesBox"),
-    dietIds: getCheckedIds("dietsBox")
-  };
+  allergyIds: getCheckedIds("allergiesBox"),
+  dietIds: getCheckedIds("dietsBox"),
+  biometrics: {
+    age: document.getElementById("ageInput").value,
+    goal: document.getElementById("goalSelect").value,
+    weight: document.getElementById("weightInput").value,
+    height: document.getElementById("heightInput").value
+  }
+};
 
 
   try {
