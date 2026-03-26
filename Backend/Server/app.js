@@ -466,7 +466,8 @@ app.get("/profile-data", async (req,res)=>{
     {data: allergies, error: e1},
     {data : diets, error: e2},
     {data: userAllergies, error: e3},
-    {data: userDiets, error: e4}
+    {data: userDiets, error: e4},
+    { data: biometrics, error: e5 }
   ]= await Promise.all([
     supabase
       .from("allergies")
@@ -486,11 +487,17 @@ app.get("/profile-data", async (req,res)=>{
     supabase
       .from("user_diet_preferences")
       .select("diet_preference_id")
+      .eq("user_id", userId),
+
+      supabase
+      .from("Biometrics")
+      .select("age, goal, weight, height, bmi")
       .eq("user_id", userId)
+      .maybeSingle()
   ]);
 
-  if (e1 || e2 || e3 || e4) {
-    console.error(e1 || e2 || e3 || e4);
+  if (e1 || e2 || e3 || e4 || e5) {
+    console.error(e1 || e2 || e3 || e4 || e5);
     return res.status(500).json({ ok: false, message: "Server error" });
   }
 
@@ -499,7 +506,14 @@ app.get("/profile-data", async (req,res)=>{
     allergies,
     diets,
     selectedAllergyIds: userAllergies.map(a => a.allergy_id),
-    selectedDietIds: userDiets.map(d => d.diet_preference_id)
+    selectedDietIds: userDiets.map(d => d.diet_preference_id),
+    biometrics: biometrics || {
+      age: "",
+      goal: "",
+      weight: "",
+      height: "",
+      bmi: ""
+    }
   });
 
 });
