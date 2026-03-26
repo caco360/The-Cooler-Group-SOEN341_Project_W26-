@@ -295,6 +295,7 @@ async function handleDeleteAccount() {
 /* ============================
    BMI Calculation Logic
 =============================== */
+
 document.addEventListener("DOMContentLoaded", () => {
   const calculateBtn = document.getElementById("calculateBMIBtn");
   const ageInput = document.getElementById("ageInput");
