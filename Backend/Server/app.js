@@ -525,8 +525,32 @@ app.post("/profile-data", async (req, res) => {
     return res.status(401).json({ ok: false, message: "Not logged in" });
   }
 
-  const { allergyIds = [], dietIds = [] } = req.body;
+  const { allergyIds = [], dietIds = [], biometrics = {} } = req.body;
 
+  const age =
+    biometrics.age === "" || biometrics.age == null
+      ? null
+      : Number(biometrics.age);
+
+  const goal =
+    biometrics.goal && String(biometrics.goal).trim() !== ""
+      ? String(biometrics.goal).trim()
+      : null;
+
+  const weight =
+    biometrics.weight === "" || biometrics.weight == null
+      ? null
+      : Number(biometrics.weight);
+
+  const height =
+    biometrics.height === "" || biometrics.height == null
+      ? null
+      : Number(biometrics.height);
+
+  let bmi = null;
+  if (weight && height && height > 0) {
+    bmi = Number((weight / Math.pow(height, 2)).toFixed(2));
+  }
   // Remove old mappings
   const delA = await supabase
     .from("user_allergies")
@@ -576,6 +600,24 @@ app.post("/profile-data", async (req, res) => {
     }
   }
 
+  const bioUpsert = await supabase
+    .from("Biometrics")
+    .upsert(
+      {
+        user_id: userId,
+        age,
+        goal,
+        weight,
+        height,
+        bmi
+      },
+      { onConflict: "user_id" }
+    );
+
+  if (bioUpsert.error) {
+    console.error(bioUpsert.error);
+    return res.status(500).json({ ok: false, message: "Server error" });
+  }
   return res.json({ ok: true });
 });
 
