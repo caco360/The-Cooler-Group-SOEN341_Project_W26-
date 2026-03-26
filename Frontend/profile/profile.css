@@ -137,7 +137,6 @@ section h2 {
   border: none;
   padding: 12px 18px;
   border-radius: 9px;
-  cursor: pointer;
   transition: 0.2s;
 }
 
@@ -168,7 +167,6 @@ section h2 {
   border-radius: 999px;
   background: #eee;
   font-size: 13px;
-  cursor: pointer;
   transition: all 0.2s;
 }
 
@@ -181,7 +179,6 @@ section h2 {
   color: #1c1c1c;
   font-weight: 500;
 }
-
 
 /* Footer */
 
@@ -243,3 +240,85 @@ footer {
   background: red;
 }
 
+/* Biometrics */
+
+.biometrics-section {
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 30px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.biometrics-section:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(0,0,0,0.08);
+}
+
+.biometrics-section h2 {
+  font-size: 16px;
+  margin-bottom: 15px;
+  color: #91380c;
+}
+
+/* form layout */
+.biometrics-input {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* inputs match card vibe */
+.biometrics-input input,
+.biometrics-input textarea {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #eee;
+  background: white;
+  font-family: "Inter", sans-serif;
+  font-size: 14px;
+  color: #444;
+  transition: 0.2s;
+}
+
+.biometrics-input input:focus,
+.biometrics-input textarea:focus {
+  outline: none;
+  border-color: rgba(243,184,62,0.55);
+  box-shadow: 0 0 0 3px rgba(243,184,62,0.18);
+}
+
+.biometrics-input select {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #eee;
+  background: white;
+  font-family: "Inter", sans-serif;
+  font-size: 14px;
+  color: #444;
+  transition: 0.2s;
+}
+
+/* Focus state */
+.biometrics-input select:focus {
+  outline: none;
+  border-color: rgba(243,184,62,0.55);
+  box-shadow: 0 0 0 3px rgba(243,184,62,0.18);
+}
+
+#calculateBMIBtn {
+  background: #91380c;
+  color: white;
+  border: none;
+  padding: 12px 18px;
+  border-radius: 9px;
+  transition: 0.2s;
+  font-weight: 600;
+}
+
+#calculateBMIBtn:hover {
+  background: #7a2f09;
+}
