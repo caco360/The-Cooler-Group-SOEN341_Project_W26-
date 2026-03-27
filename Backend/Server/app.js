@@ -632,7 +632,11 @@ app.get("/meal-planner", async (req, res) => {
     return res.status(401).json({ ok: false, message: "Not logged in" });
   }
 
-  const { week_start_date } = req.query;
+  let { week_start_date } = req.query;
+
+  week_start_date = new Date(week_start_date)
+  .toISOString()
+  .split("T")[0];
 
   if (!week_start_date) {
     return res.status(400).json({
@@ -775,6 +779,10 @@ app.post("/meal-planner", async (req, res) => {
   let { recipe_id, week_start_date, day_of_week, meal_type } = req.body;
 
   recipe_id = Number(recipe_id);
+
+  week_start_date = new Date(week_start_date)
+  .toISOString()
+  .split("T")[0];
 
   if (!recipe_id || !week_start_date || !day_of_week || !meal_type) {
     return res.status(400).json({
