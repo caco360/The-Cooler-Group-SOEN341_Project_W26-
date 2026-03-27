@@ -632,7 +632,11 @@ app.get("/meal-planner", async (req, res) => {
     return res.status(401).json({ ok: false, message: "Not logged in" });
   }
 
-  const { week_start_date } = req.query;
+  let { week_start_date } = req.query;
+
+  week_start_date = new Date(week_start_date)
+  .toISOString()
+  .split("T")[0];
 
   if (!week_start_date) {
     return res.status(400).json({
@@ -675,6 +679,96 @@ app.get("/meal-planner", async (req, res) => {
   });
 });
 
+
+// app.post("/meal-planner", async (req, res) => {
+//   const userId = req.session.userId;
+
+//   if (!userId) {
+//     return res.status(401).json({ ok: false, message: "Not logged in" });
+//   }
+
+//   let { recipe_id, week_start_date, day_of_week, meal_type } = req.body;
+
+//   recipe_id = Number(recipe_id);
+
+//   try {
+//     // 1. Check if slot already exists
+//     const { data: existing, error: findError } = await supabase
+//       .from("meal_planner")
+//       .select("id")
+//       .eq("user_id", userId)
+//       .eq("week_start_date", week_start_date)
+//       .eq("day_of_week", day_of_week)
+//       .eq("meal_type", meal_type)
+//       .maybeSingle();
+
+//     if (findError) {
+//       console.error(findError);
+//       return res.status(500).json({ ok: false, message: "Server error" });
+//     }
+//        // 2. Check duplicate recipe in same day
+//     const { data: duplicate, error: dupError } = await supabase
+//       .from("meal_planner")
+//       .select("id")
+//       .eq("user_id", userId)
+//       .eq("week_start_date", week_start_date)
+//       .eq("day_of_week", day_of_week)
+//       .eq("recipe_id", recipe_id)
+//       .maybeSingle();
+
+//     if (dupError) {
+//       console.error(dupError);
+//       return res.status(500).json({ ok: false, message: "Server error" });
+//     }
+
+//     if (duplicate && (!existing || duplicate.id !== existing.id)) {
+//       return res.status(400).json({
+//         ok: false,
+//         message: "This recipe is already used on that day"
+//       });
+//     }
+
+//     let result;
+
+//     if (existing) {
+//       // 3. UPDATE existing slot
+//       const { data, error } = await supabase
+//         .from("meal_planner")
+//         .update({ recipe_id })
+//         .eq("id", existing.id)
+//         .select()
+//         .single();
+
+//       if (error) throw error;
+
+//       result = data;
+
+//     } else {
+//       // 4. INSERT new slot
+//       const { data, error } = await supabase
+//         .from("meal_planner")
+//         .insert([{
+//           user_id: userId,
+//           recipe_id,
+//           week_start_date,
+//           day_of_week,
+//           meal_type
+//         }])
+//         .select()
+//         .single();
+
+//       if (error) throw error;
+
+//       result = data;
+//     }
+
+//     return res.json({ ok: true, meal: result });
+
+//   } catch (err) {
+//     console.error("MEAL UPSERT ERROR:", err);
+//     return res.status(500).json({ ok: false, message: "Server error" });
+//   }
+// });
 app.post("/meal-planner", async (req, res) => {
   const userId = req.session.userId;
 
@@ -684,93 +778,77 @@ app.post("/meal-planner", async (req, res) => {
 
   let { recipe_id, week_start_date, day_of_week, meal_type } = req.body;
 
+  recipe_id = Number(recipe_id);
+
+  week_start_date = new Date(week_start_date)
+  .toISOString()
+  .split("T")[0];
+
   if (!recipe_id || !week_start_date || !day_of_week || !meal_type) {
     return res.status(400).json({
       ok: false,
-      message: "recipe_id, week_start_date, day_of_week, and meal_type are required"
+      message: "Missing required fields"
     });
   }
 
-  recipe_id = Number(recipe_id);
-  day_of_week = String(day_of_week).trim().toLowerCase();
-  meal_type = String(meal_type).trim().toLowerCase();
+  try {
+    // -------------------------------
+    // 1. Prevent same recipe same day
+    // -------------------------------
+    const { data: duplicate, error: dupError } = await supabase
+      .from("meal_planner")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("week_start_date", week_start_date)
+      .eq("day_of_week", day_of_week)
+      .eq("recipe_id", recipe_id)
+      .maybeSingle();
 
-  const validDays = [
-    "monday", "tuesday", "wednesday",
-    "thursday", "friday", "saturday", "sunday"
-  ];
+    if (dupError) {
+      console.error("DUPLICATE CHECK ERROR:", dupError);
+      return res.status(500).json({ ok: false, message: "Server error" });
+    }
 
-  const validMealTypes = ["breakfast", "lunch", "dinner", "snack"];
+    if (duplicate) {
+      return res.status(400).json({
+        ok: false,
+        message: "This recipe is already used on that day"
+      });
+    }
 
-  if (!Number.isFinite(recipe_id)) {
-    return res.status(400).json({
-      ok: false,
-      message: "Invalid recipe_id"
+    // -------------------------------
+    // 2. UPSERT (insert or update slot)
+    // -------------------------------
+    const { data, error } = await supabase
+      .from("meal_planner")
+      .upsert(
+        [{
+          user_id: userId,
+          recipe_id,
+          week_start_date,
+          day_of_week,
+          meal_type
+        }],
+        {
+          onConflict: "user_id,week_start_date,day_of_week,meal_type"
+        }
+      )
+      .select()
+      .single();
+
+    if (error) {
+      console.error("UPSERT ERROR:", error);
+      return res.status(500).json({ ok: false, message: "Server error" });
+    }
+
+    return res.json({
+      ok: true,
+      meal: data
     });
+
+  } catch (err) {
+    console.error("MEAL UPSERT ERROR:", err);
+    return res.status(500).json({ ok: false, message: "Server error" });
   }
-
-  if (!validDays.includes(day_of_week)) {
-    return res.status(400).json({
-      ok: false,
-      message: "Invalid day_of_week"
-    });
-  }
-
-  if (!validMealTypes.includes(meal_type)) {
-    return res.status(400).json({
-      ok: false,
-      message: "Invalid meal_type"
-    });
-  }
-
-  // Optional but smart: make sure recipe belongs to logged-in user
-  const { data: recipe, error: recipeError } = await supabase
-    .from("Recipes")
-    .select("id")
-    .eq("id", recipe_id)
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (recipeError) {
-    console.error("RECIPE CHECK ERROR:", recipeError);
-    return res.status(500).json({
-      ok: false,
-      message: "Server error"
-    });
-  }
-
-  if (!recipe) {
-    return res.status(404).json({
-      ok: false,
-      message: "Recipe not found"
-    });
-  }
-
-  const { data, error } = await supabase
-    .from("meal_planner")
-    .insert([{
-      user_id: userId,
-      recipe_id,
-      week_start_date,
-      day_of_week,
-      meal_type
-    }])
-    .select()
-    .single();
-
-  if (error) {
-    console.error("MEAL PLANNER INSERT ERROR:", error);
-
-    return res.status(500).json({
-      ok: false,
-      message: error.message
-    });
-  }
-
-  return res.status(201).json({
-    ok: true,
-    meal: data
-  });
 });
-
 export default app;
