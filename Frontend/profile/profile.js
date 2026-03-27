@@ -71,7 +71,11 @@ async function loadProfile() {
       data.diets,
       data.selectedDietIds
     );
-
+    document.getElementById("ageInput").value = data.biometrics?.age ?? "";
+    document.getElementById("goalSelect").value = data.biometrics?.goal ?? "";
+    document.getElementById("weightInput").value = data.biometrics?.weight ?? "";
+    document.getElementById("heightInput").value = data.biometrics?.height ?? "";
+    document.getElementById("bmiResult").value = data.biometrics?.bmi ?? "";
   }
   catch (err) {
     console.error("Load failed:", err);
@@ -142,9 +146,15 @@ async function saveProfile() {
 
 
   const payload = {
-    allergyIds: getCheckedIds("allergiesBox"),
-    dietIds: getCheckedIds("dietsBox")
-  };
+  allergyIds: getCheckedIds("allergiesBox"),
+  dietIds: getCheckedIds("dietsBox"),
+  biometrics: {
+    age: document.getElementById("ageInput").value,
+    goal: document.getElementById("goalSelect").value,
+    weight: document.getElementById("weightInput").value,
+    height: document.getElementById("heightInput").value
+  }
+};
 
 
   try {

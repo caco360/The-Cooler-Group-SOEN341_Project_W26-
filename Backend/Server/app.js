@@ -466,7 +466,8 @@ app.get("/profile-data", async (req,res)=>{
     {data: allergies, error: e1},
     {data : diets, error: e2},
     {data: userAllergies, error: e3},
-    {data: userDiets, error: e4}
+    {data: userDiets, error: e4},
+    { data: biometrics, error: e5 }
   ]= await Promise.all([
     supabase
       .from("allergies")
@@ -486,11 +487,17 @@ app.get("/profile-data", async (req,res)=>{
     supabase
       .from("user_diet_preferences")
       .select("diet_preference_id")
+      .eq("user_id", userId),
+
+      supabase
+      .from("Biometrics")
+      .select("age, goal, weight, height, bmi")
       .eq("user_id", userId)
+      .maybeSingle()
   ]);
 
-  if (e1 || e2 || e3 || e4) {
-    console.error(e1 || e2 || e3 || e4);
+  if (e1 || e2 || e3 || e4 || e5) {
+    console.error(e1 || e2 || e3 || e4 || e5);
     return res.status(500).json({ ok: false, message: "Server error" });
   }
 
@@ -499,7 +506,14 @@ app.get("/profile-data", async (req,res)=>{
     allergies,
     diets,
     selectedAllergyIds: userAllergies.map(a => a.allergy_id),
-    selectedDietIds: userDiets.map(d => d.diet_preference_id)
+    selectedDietIds: userDiets.map(d => d.diet_preference_id),
+    biometrics: biometrics || {
+      age: "",
+      goal: "",
+      weight: "",
+      height: "",
+      bmi: ""
+    }
   });
 
 });
@@ -511,8 +525,32 @@ app.post("/profile-data", async (req, res) => {
     return res.status(401).json({ ok: false, message: "Not logged in" });
   }
 
-  const { allergyIds = [], dietIds = [] } = req.body;
+  const { allergyIds = [], dietIds = [], biometrics = {} } = req.body;
 
+  const age =
+    biometrics.age === "" || biometrics.age == null
+      ? null
+      : Number(biometrics.age);
+
+  const goal =
+    biometrics.goal && String(biometrics.goal).trim() !== ""
+      ? String(biometrics.goal).trim()
+      : null;
+
+  const weight =
+    biometrics.weight === "" || biometrics.weight == null
+      ? null
+      : Number(biometrics.weight);
+
+  const height =
+    biometrics.height === "" || biometrics.height == null
+      ? null
+      : Number(biometrics.height);
+
+  let bmi = null;
+  if (weight && height && height > 0) {
+    bmi = Number((weight / Math.pow(height, 2)).toFixed(2));
+  }
   // Remove old mappings
   const delA = await supabase
     .from("user_allergies")
@@ -562,6 +600,24 @@ app.post("/profile-data", async (req, res) => {
     }
   }
 
+  const bioUpsert = await supabase
+    .from("Biometrics")
+    .upsert(
+      {
+        user_id: userId,
+        age,
+        goal,
+        weight,
+        height,
+        bmi
+      },
+      { onConflict: "user_id" }
+    );
+
+  if (bioUpsert.error) {
+    console.error(bioUpsert.error);
+    return res.status(500).json({ ok: false, message: "Server error" });
+  }
   return res.json({ ok: true });
 });
 
