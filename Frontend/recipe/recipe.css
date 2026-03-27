@@ -534,6 +534,26 @@ DIET PREFERENCES
   box-shadow: 0 0 0 3px rgba(243,184,62,0.18);
 }
 
+.recipe-form select {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #eee;
+  background: white;
+  font-family: "Inter", sans-serif;
+  font-size: 14px;
+  color: #444;
+  transition: 0.2s;
+  cursor: pointer;
+}
+
+/* Focus state */
+.recipe-form select:focus {
+  outline: none;
+  border-color: rgba(243,184,62,0.55);
+  box-shadow: 0 0 0 3px rgba(243,184,62,0.18);
+}
+
 /* make textareas span full width */
 #descInput,
 #ingredientsInput {
@@ -572,3 +592,4 @@ DIET PREFERENCES
     justify-self: start;
   }
 }
+

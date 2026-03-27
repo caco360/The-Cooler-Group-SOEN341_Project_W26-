@@ -291,3 +291,36 @@ async function handleDeleteAccount() {
     alert("Network error. Could not delete account.");
   }
 }
+
+/* ============================
+   BMI Calculation Logic
+=============================== */
+
+document.addEventListener("DOMContentLoaded", () => {
+  const calculateBtn = document.getElementById("calculateBMIBtn");
+  const ageInput = document.getElementById("ageInput");
+  const weightInput = document.getElementById("weightInput");
+  const heightInput = document.getElementById("heightInput");
+  const bmiResult = document.getElementById("bmiResult");
+
+  calculateBtn.addEventListener("click", () => {
+    const age = parseInt(ageInput.value, 10) // age number value is in base 10
+    const weight = parseFloat(weightInput.value);
+    const height = parseFloat(heightInput.value);
+
+    // Triggers pop-up if user is under 20 years old
+    if (age < 20) {
+      alert("Warning: Standard BMI calculations might not be an accurate way to assess body weight health for users under 20 years old. Please consult a medical professional for more adequate dieting advice.");
+    }
+
+    // Basic validation
+    if (weight > 0 && height > 0) {
+      const bmi = weight / Math.pow(height, 2);
+      
+      // Rounding to 2 decimals
+      bmiResult.value = bmi.toFixed(2); 
+    } else {
+      bmiResult.value = "Invalid input";
+    }
+  });
+});

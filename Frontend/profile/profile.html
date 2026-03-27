@@ -23,6 +23,7 @@
     <nav>
       <a href="profile.html" class="active">Profile</a>
       <a href="../recipe/recipe.html">Recipes</a>
+      <a href="../meal_planner/meal_planner.html">Meal Planner</a>
     </nav>
 
   </aside>
@@ -65,6 +66,41 @@
       <div id="dietsBox" class="pill-box"></div>
 
     </section>
+
+      <!-- Biometrics -->
+    <section class="biometrics-section">
+          <h2>Biometrics</h2>
+          <div class="biometrics-input">
+
+            <label for="ageInput">Age:</label>
+            <label for="goalSelect">Goal:</label>
+            <input type="number" id="ageInput" placeholder="Age" min="1" max="125" />
+            <select id="goalSelect">
+                <option value="" disabled selected>Select your goal...</option>
+                <option value="weightLoss">Weight Loss</option>
+                <option value="weightGain">Weight Gain</option>
+                <option value="recomp">Body Recomposition</option>
+                <option value="bulking">Bulking</option>
+                <option value="cutting">Cutting</option>
+                <option value="rehab">Rehabilitation</option>
+                <option value="fasting">Intermittent Fasting</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="tracking">Tracking Calories</option>
+                <option value="balance">Nutritional Balance</option>
+            </select>
+            <label for="weightInput">Body Mass (in kilograms):</label>
+            <label for="heightInput">Body Height (in meters):</label>
+            <input type="number" id="weightInput" placeholder="Weight (kilograms)" min="1" max="700" step="0.001" />
+            <input type="number" id="heightInput" placeholder="Height (meters)" min="0.5" max="3" step="0.001" />
+    
+            <label for="bmiResult">Body Mass Index (in kilograms per meters squared):</label>
+            <p>-~- Note: Ideal BMI value is *usually* between 18.5 and 24.9 -~-</p>
+            <button id="calculateBMIBtn">Calculate your BMI</button>
+            <input type="text" id="bmiResult" value="" placeholder="BMI" readonly/>
+      
+          </div>
+
+      </section>
 
 
     <!-- Buttons -->
