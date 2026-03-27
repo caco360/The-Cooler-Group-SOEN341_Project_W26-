@@ -251,6 +251,7 @@ function renderRecipes(
       ? "—"
       : `${escapeHtml(r.prep_time)} min`;
     const cost = (r.cost === null || r.cost === undefined) ? "—" : `$${escapeHtml(r.cost)}`;
+    const calories = (r.calories === null || r.calories === undefined) ? "—" : `${escapeHtml(r.calories)} cal`;
     const diet = r.diet_name || "No dietary pref";
     const ingredients = Array.isArray(r.ingredients) ? r.ingredients : [];
     const ingHtml = ingredients.length
@@ -264,6 +265,7 @@ function renderRecipes(
             <h3 class="recipe-title">${title}</h3>
             <span class="prep-badge">${prep}</span>
             <span class="prep-badge">${cost}</span>
+            <span class="prep-badge">${calories}</span>
             <span class="prep-badge">${diet}</span>
           </div>
           <div class="card-actions">
@@ -302,6 +304,7 @@ async function addRecipe() {
   const prep_time = document.getElementById("prepInput")?.value;
   const ingredientsRaw = document.getElementById("ingredientsInput")?.value;
   const cost = document.getElementById("costInput")?.value;
+  const calories = document.getElementById("caloriesInput")?.value;
   const diet_id = document.getElementById("dietSelect").value;
 
   if (!title) {
@@ -324,6 +327,7 @@ async function addRecipe() {
         prep_time: prep_time ? Number(prep_time) : null,
         ingredients,
         cost: cost ? Number(cost) : null,
+        calories: calories ? Number(calories) : null,
         diet_id: diet_id ? Number(diet_id) : null
       }),
     });
@@ -341,6 +345,7 @@ async function addRecipe() {
     if (document.getElementById("prepInput")) document.getElementById("prepInput").value = "";
     if (document.getElementById("ingredientsInput")) document.getElementById("ingredientsInput").value = "";
     if (document.getElementById("costInput")) document.getElementById("costInput").value = "";
+    if (document.getElementById("caloriesInput")) document.getElementById("caloriesInput").value = "";
 
     loadRecipes();
 
@@ -395,7 +400,10 @@ function startEdit(recipeId) {
 
   const titleEl = card.querySelector(".recipe-title");
   const descEl  = card.querySelector(".recipe-desc");
-  const prepEl  = card.querySelector(".prep-badge");
+  const badges = card.querySelectorAll(".prep-badge");
+  const prepEl = badges[0];
+  const costEl = badges[1];
+  const caloriesEl = badges[2];
 
   titleEl.outerHTML =
     `<input class="edit-title" value="${escapeHtml(recipe.title || "")}">`;
@@ -408,7 +416,10 @@ function startEdit(recipeId) {
     `<span class="prep-badge">
        <input class="edit-prep" type="number" value="${recipe.prep_time ?? ""}" style="width:60px"> min
      </span>`;
-
+  caloriesEl.outerHTML =
+  `<span class="prep-badge">
+     <input class="edit-calories" type="number" value="${recipe.calories ?? ""}" style="width:70px"> cal
+   </span>`;
   const ingBlock = card.querySelector(".ingredients-pills");
   const ingValue = (Array.isArray(recipe.ingredients) ? recipe.ingredients : []).join(", ");
   ingBlock.innerHTML =
@@ -421,6 +432,19 @@ function startEdit(recipeId) {
   );
   actions.querySelector('button[data-action="edit"]').remove();
   actions.querySelector('button[data-action="save"]').addEventListener("click", () => saveRecipe(card));
+}
+async function saveRecipe(card) {
+  const id = card.dataset.id;
+
+  const payload = {
+    title: card.querySelector(".edit-title").value.trim(),
+    description: card.querySelector(".edit-desc").value.trim(),
+    prep_time: Number(card.querySelector(".edit-prep").value),
+    ingredients: card.querySelector(".edit-ingredients")
+      .value.split(",")
+      .map(v => v.trim())
+      .filter(Boolean),
+  };
 }
 
 async function loadDietPreferences() {

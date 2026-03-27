@@ -52,6 +52,7 @@
             <input type="text" id="titleInput" placeholder="Recipe title" />
             <input type="number" id="prepInput" placeholder="Prep time (minutes)" min="0" />
             <input type="number" id="costInput" placeholder="Cost ($)" min="0" step="0.01" />
+            <input type="number" id="caloriesInput" placeholder="Calories" min="0" />
             <textarea id="descInput" placeholder="Description"></textarea>
             <select id="dietSelect">  <option value="">Loading...</option></select>
             <textarea id="ingredientsInput" placeholder="Ingredients (one per line)"></textarea>
@@ -142,6 +143,12 @@
       <span class="cost-sep">—</span>
       <input id="filterCostMax" type="number" step="0.01" placeholder="Max" />
     </div>
+    <label>Calories</label>
+<div class="cost-row">
+  <input id="filterCaloriesMin" type="number" placeholder="Min" />
+  <span class="cost-sep">—</span>
+  <input id="filterCaloriesMax" type="number" placeholder="Max" />
+</div>
 
     <div style="height:10px"></div>
 
