@@ -2,6 +2,7 @@ import request from "supertest";
 import app from "../Backend/Server/app.js";
 
 describe("Meal Planner flow", () => {
+  const WEEK = `2026-03-${Math.floor(Math.random() * 20 + 1)}`;
 
   const agent = request.agent(app);
   let recipeId;
@@ -35,7 +36,7 @@ describe("Meal Planner flow", () => {
   test("Add recipe to meal planner", async () => {
     const res = await agent.post("/meal-planner").send({
       recipe_id: recipeId,
-      week_start_date: "2026-03-23",
+      week_start_date: WEEK,
       day_of_week: "monday",
       meal_type: "lunch"
     });
@@ -48,14 +49,16 @@ describe("Meal Planner flow", () => {
   test("Verify meal planner entry exists", async () => {
     const res = await agent
       .get("/meal-planner")
-      .query({ week_start_date: "2026-03-23" });
+      .query({ week_start_date: WEEK });
 
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
 
     const meals = res.body.meals;
 
-    const found = meals.find(m => m.recipe_id === recipeId);
+    const found = meals.find(
+  m => Number(m.recipe_id) === Number(recipeId)
+);
 
     expect(found).toBeDefined();
     expect(found.day_of_week).toBe("monday");
