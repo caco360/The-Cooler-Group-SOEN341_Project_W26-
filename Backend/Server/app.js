@@ -839,6 +839,22 @@ app.post("/meal-planner", async (req, res) => {
   week_start_date = new Date(week_start_date)
   .toISOString()
   .split("T")[0];
+  if (!recipe_id) {
+  const { error } = await supabase
+    .from("meal_planner")
+    .delete()
+    .eq("user_id", userId)
+    .eq("week_start_date", week_start_date)
+    .eq("day_of_week", day_of_week)
+    .eq("meal_type", meal_type);
+
+  if (error) {
+    console.error("DELETE SLOT ERROR:", error);
+    return res.status(500).json({ ok: false, message: "Server error" });
+  }
+
+  return res.json({ ok: true, removed: true });
+}
 
   if (!recipe_id || !week_start_date || !day_of_week || !meal_type) {
     return res.status(400).json({

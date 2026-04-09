@@ -67,6 +67,11 @@ function bindModal() {
   const closeBtn = document.getElementById("closeModalBtn");
   const modal = document.getElementById("mealModal");
   const form = document.getElementById("mealForm");
+  const removeBtn = document.getElementById("removeMealBtn");
+
+if (removeBtn) {
+  removeBtn.addEventListener("click", removeMealFromPlanner);
+}
 
   if (closeBtn) {
     closeBtn.addEventListener("click", closeMealModal);
@@ -270,4 +275,39 @@ function renderPlannerMeals(meals) {
       </div>
     `;
   });
+}
+async function removeMealFromPlanner() {
+  const mealType = document.getElementById("mealTypeSelect")?.value;
+  const day = document.getElementById("selectedDay")?.value;
+
+  if (!mealType || !day) return;
+
+  try {
+    const res = await fetch("/meal-planner", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        recipe_id: null, // 👈 triggers delete
+        week_start_date: currentWeekStart,
+        day_of_week: day,
+        meal_type: mealType
+      })
+    });
+
+    const data = await res.json();
+
+    if (!data.ok) {
+      alert(data.message || "Failed to remove meal.");
+      return;
+    }
+
+    closeMealModal();
+    loadPlannerMeals();
+
+  } catch (err) {
+    console.error("Remove meal error:", err);
+    alert("Server error.");
+  }
 }
