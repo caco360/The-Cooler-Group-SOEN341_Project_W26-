@@ -264,7 +264,7 @@ function renderPlannerMeals(meals) {
 
     if (!slot) return;
 
-    const recipe = meal.Recipes;
+    const recipe = meal.recipes;
     const title = recipe?.title || "Untitled recipe";
 
     slot.classList.remove("empty");

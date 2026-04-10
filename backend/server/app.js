@@ -2,7 +2,7 @@ import "dotenv/config";
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
-import supabase from "./supabaseClient.js";
+import supabase from "./supabase-client.js";
 import session from "express-session";
 
 
@@ -21,12 +21,12 @@ app.use(session({
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-app.use(express.static(path.join(__dirname, "../../Frontend"))); 
+app.use(express.static(path.join(__dirname, "../../frontend"))); 
 
 
-// Serve the main homepage at root -> Frontend/Home/index.html
+// Serve the main homepage at root -> Frontend/home/index.html
 app.get("/", (req, res) => {
-  return res.sendFile(path.join(__dirname, "../../Frontend/Home/index.html"));
+  return res.sendFile(path.join(__dirname, "../../frontend/home/index.html"));
 });
 
 
@@ -48,7 +48,7 @@ app.post("/login", async (req, res) => {
   }
 
   const { data: user, error } = await supabase
-    .from("User")
+    .from("user")
     .select("id, username, password")
     .eq("username", username)
     .maybeSingle();
@@ -107,7 +107,7 @@ app.post("/register", async (req, res) => {
 
   // Check if username exists
   const { data: existingUser, error: e1 } = await supabase
-    .from("User")
+    .from("user")
     .select("id")
     .eq("username", username)
     .maybeSingle();
@@ -129,7 +129,7 @@ app.post("/register", async (req, res) => {
 
   // Create user
   const { error: e2 } = await supabase
-    .from("User")
+    .from("user")
     .insert([
       { username, password }
     ]);
@@ -175,7 +175,7 @@ app.get("/my-recipes", async (req, res) => {
   }
 
   const { data: recipes, error: recipesError } = await supabase
-    .from("Recipes")
+    .from("recipes")
     .select("id, title, description, prep_time, ingredients, cost, diet_id")
     .eq("user_id", userId)
     .order("id", { ascending: false });
@@ -235,7 +235,7 @@ app.delete("/recipes/:id", async (req, res) => {
   }
 
   const { error } = await supabase
-    .from("Recipes")
+    .from("recipes")
     .delete()
     .eq("id", recipeId)
     .eq("user_id", userId); // prevents deleting another user's recipe
@@ -267,7 +267,7 @@ app.put("/recipes/:id", async (req, res) => {
   const { title, description, prep_time, ingredients } = req.body;
 
   const { error } = await supabase
-    .from("Recipes")
+    .from("recipes")
     .update({
       title,
       description,
@@ -324,7 +324,7 @@ if(cost!=null){
 ingredients = ingredients.map(x => String(x).trim());
 
 try{
-  const{data,err} = await supabase.from("Recipes").insert([{
+  const{data,err} = await supabase.from("recipes").insert([{
     user_id:userId,
     title,
     description,
@@ -490,7 +490,7 @@ app.get("/profile-data", async (req,res)=>{
       .eq("user_id", userId),
 
       supabase
-      .from("Biometrics")
+      .from("biometrics")
       .select("age, goal, weight, height, bmi")
       .eq("user_id", userId)
       .maybeSingle()
@@ -601,7 +601,7 @@ app.post("/profile-data", async (req, res) => {
   }
 
   const bioUpsert = await supabase
-    .from("Biometrics")
+    .from("biometrics")
     .upsert(
       {
         user_id: userId,
@@ -641,9 +641,9 @@ app.delete("/api/delete-account", async (req, res) => {
   }
 
   try {
-    // Erase user from Supabase 'User' table
+    // Erase user from Supabase 'user' table
     const { error } = await supabase
-      .from("User")
+      .from("user")
       .delete()
       .eq("id", userId);
 
@@ -664,7 +664,7 @@ app.delete("/api/delete-account", async (req, res) => {
 
 app.get("/test-diet", async (req, res) => {
   const { data, error } = await supabase
-    .from("Recipes")
+    .from("recipes")
     .select(`
       id,
       title,
@@ -709,7 +709,7 @@ app.get("/meal-planner", async (req, res) => {
       day_of_week,
       meal_type,
       recipe_id,
-      Recipes (
+      recipes (
         id,
         title,
         description,

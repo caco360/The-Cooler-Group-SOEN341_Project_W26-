@@ -1,5 +1,5 @@
 import request from "supertest";
-import app from "../Backend/Server/app.js";
+import app from "../backend/server/app.js";
 
 describe("Meal Planner flow", () => {
   const WEEK = `2026-03-${Math.floor(Math.random() * 20 + 1)}`;
