@@ -8,7 +8,7 @@ Jerrish Pathmanathan 40317944
 
 Being a student can be so time consuming that you may lose track of your dietary needs. If you are a student who has trouble planning meals, tracking groceries or simply searching for new easy recipees, then this app is for you! 
 
-MealMajor is a one-stop-shop for students to be able to meal-prep, track your meals and more!
+MealMajor is a one-stop-shop for students to be able to meal-prep, track your meals and calories!
 
 Take advantage of everything feature MealMajor has to offer such as:
 - Creating an account which will allow you to enter all your diet preferences and allergies.
