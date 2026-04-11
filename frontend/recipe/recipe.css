@@ -499,11 +499,27 @@ DIET PREFERENCES
   box-shadow: 0 10px 22px rgba(0,0,0,0.08);
 }
 
+.add-recipes-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
 .add-recipes-section h2 {
   font-size: 16px;
   color: #1c1c1c;
   font-weight: 600;
   margin-bottom: 14px;
+}
+
+.recipe-form-panel {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #eee;
+}
+
+.recipe-form-panel[hidden] {
+  display: none;
 }
 
 /* form layout */
@@ -580,8 +596,165 @@ DIET PREFERENCES
   color: #b00020;
 }
 
+.ingredient-builder {
+  grid-column: 1 / -1;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.ingredient-builder-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.ingredient-builder-header h3 {
+  font-size: 14px;
+  color: #1c1c1c;
+  margin-bottom: 4px;
+}
+
+.ingredient-builder-header p {
+  font-size: 12px;
+  color: #666;
+}
+
+.ingredient-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ingredient-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px auto;
+  gap: 12px;
+  align-items: start;
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.ingredient-search-wrap {
+  position: relative;
+}
+
+.ingredient-search {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #eee;
+  background: white;
+  font-family: "Inter", sans-serif;
+  font-size: 14px;
+  color: #444;
+}
+
+.ingredient-search:focus,
+.ingredient-amount:focus {
+  outline: none;
+  border-color: rgba(243,184,62,0.55);
+  box-shadow: 0 0 0 3px rgba(243,184,62,0.18);
+}
+
+.ingredient-results {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 25;
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  box-shadow: 0 14px 30px rgba(0,0,0,0.12);
+  max-height: 220px;
+  overflow-y: auto;
+  display: none;
+}
+
+.ingredient-results.open {
+  display: block;
+}
+
+.ingredient-result-btn {
+  width: 100%;
+  border: 0;
+  background: white;
+  text-align: left;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f2f2f2;
+}
+
+.ingredient-result-btn:hover {
+  background: rgba(243,184,62,0.12);
+}
+
+.ingredient-result-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1c1c1c;
+}
+
+.ingredient-result-subtitle {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+}
+
+.ingredient-selected {
+  font-size: 12px;
+  color: #91380c;
+  margin-top: 8px;
+  min-height: 16px;
+}
+
+.ingredient-amount {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #eee;
+  background: white;
+  font-family: "Inter", sans-serif;
+  font-size: 14px;
+  color: #444;
+}
+
+.ingredient-remove {
+  background: transparent;
+  color: #91380c;
+  border: 1px solid rgba(145,56,12,0.35);
+  padding: 12px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: 0.2s;
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.ingredient-remove:hover {
+  background: rgba(145,56,12,0.08);
+  border-color: rgba(145,56,12,0.6);
+}
+
+.ingredient-empty {
+  font-size: 13px;
+  color: #666;
+  padding: 8px 2px;
+}
+
 /* responsive: stack like recipes-grid */
 @media (max-width: 980px) {
+  .add-recipes-header {
+    align-items: flex-start;
+  }
+
   .recipe-form {
     grid-template-columns: 1fr;
   }
@@ -590,6 +763,23 @@ DIET PREFERENCES
   #createMsg {
     grid-column: 1 / -1;
     justify-self: start;
+  }
+}
+
+@media (max-width: 720px) {
+  .ingredient-builder-header,
+  .ingredient-row {
+    flex-direction: column;
+  }
+
+  .ingredient-builder-header {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ingredient-row {
+    display: flex;
+    flex-direction: column;
   }
 }
 
