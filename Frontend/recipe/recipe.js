@@ -1,7 +1,7 @@
 ﻿document.addEventListener("DOMContentLoaded", init);
 
-const USDA_SEARCH_MIN_LENGTH = 2;
-const USDA_SEARCH_LIMIT = 12;
+const USDA_SEARCH_MIN_LENGTH = 0;
+const USDA_SEARCH_LIMIT = 1000;
 let ingredientRowCounter = 0;
 
 function setRecipeFormOpen(isOpen) {

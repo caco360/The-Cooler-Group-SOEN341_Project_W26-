@@ -17,13 +17,27 @@ describe("Meal Planner flow", () => {
     expect(res.body.ok).toBe(true);
   });
 
+  afterAll(async () => {
+    if (recipeId) {
+      await agent.post("/meal-planner").send({
+        recipe_id: null,
+        week_start_date: WEEK,
+        day_of_week: "monday",
+        meal_type: "lunch"
+      });
+
+      await agent.delete(`/recipes/${recipeId}`);
+    }
+  });
+
   test("Create recipe for planner", async () => {
     const res = await agent.post("/recipes").send({
       title: `Planner Test ${Date.now()}`,
       description: "Meal planner test recipe",
       prep_time: 10,
       ingredients: ["Test"],
-      cost: 5
+      cost: 5,
+      calories: 1000
     });
 
     expect(res.status).toBe(201);
@@ -63,6 +77,7 @@ describe("Meal Planner flow", () => {
     expect(found).toBeDefined();
     expect(found.day_of_week).toBe("monday");
     expect(found.meal_type).toBe("lunch");
+    expect(found.Recipes.total_calories).toBe(1000);
   });
 
 });

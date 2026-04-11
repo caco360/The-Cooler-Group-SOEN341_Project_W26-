@@ -20,5 +20,7 @@ Take advantage of everything feature MealMajor has to offer such as:
 - you'll be able to edit or remove meals from the planner at any time
 - You'll also be able to prevent duplicates for the same week
 
-
+## Build, Test, and Development Commands
+- `npm start`: runs the Express server from `Backend/Server/server.js`.
+- `npm test`: runs the Jest test suite with ESM support.
 

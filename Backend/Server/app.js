@@ -10,6 +10,20 @@ const app = express();
 app.use(express.json());
 
 const USDA_CALORIE_NUTRIENT_ID = 1008;
+const activityMultipliers = {
+  no_exercise: 1.2,
+  light_1_2_days: 1.375,
+  moderate_3_5_days: 1.55,
+  intense_6_7_days: 1.725,
+  very_intense_job: 1.9
+};
+const goalAdjustments = {
+  high_weight_gain: 1000,
+  normal_weight_gain: 500,
+  maintain: 0,
+  normal_weight_loss: -500,
+  extreme_weight_loss: -1000
+};
 
 app.use(session({
   secret: process.env.SESSION_SECRET || "dev-secret",
@@ -170,6 +184,94 @@ function toFiniteNumber(value) {
 
   const num = Number(value);
   return Number.isFinite(num) ? num : null;
+}
+
+function toPositiveNumber(value) {
+  const num = toFiniteNumber(value);
+  return num !== null && num > 0 ? num : null;
+}
+
+function toPositiveInteger(value) {
+  const num = toPositiveNumber(value);
+  return num !== null ? Math.trunc(num) : null;
+}
+
+function normalizeSex(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+
+  if (normalized === "male" || normalized === "female") {
+    return normalized;
+  }
+
+  return null;
+}
+
+function normalizeGoal(value) {
+  const normalized = String(value || "").trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  const legacyGoalMap = {
+    weightLoss: "normal_weight_loss",
+    weightGain: "normal_weight_gain",
+    recomp: "maintain",
+    bulking: "high_weight_gain",
+    cutting: "normal_weight_loss",
+    rehab: "maintain",
+    fasting: "extreme_weight_loss",
+    maintenance: "maintain",
+    tracking: "maintain",
+    balance: "maintain"
+  };
+
+  if (goalAdjustments[normalized] !== undefined) {
+    return normalized;
+  }
+
+  return legacyGoalMap[normalized] || null;
+}
+
+function normalizeActivityLevel(value) {
+  const normalized = String(value || "").trim();
+
+  if (activityMultipliers[normalized]) {
+    return normalized;
+  }
+
+  return null;
+}
+
+function calculateBiometricsMetrics({ age, sex, weight, height, activityLevel, goal }) {
+  let bmi = null;
+  let calorieGoal = null;
+
+  if (weight && height) {
+    bmi = Number((weight / Math.pow(height, 2)).toFixed(2));
+  }
+
+  if (
+    age &&
+    weight &&
+    height &&
+    sex &&
+    activityLevel &&
+    goal &&
+    activityMultipliers[activityLevel] &&
+    goalAdjustments[goal] !== undefined
+  ) {
+    const heightCm = height * 100;
+    const sexOffset = sex === "male" ? 5 : -161;
+    const bmr = (10 * weight) + (6.25 * heightCm) - (5 * age) + sexOffset;
+    const maintenanceCalories = bmr * activityMultipliers[activityLevel];
+
+    calorieGoal = Math.round(
+      maintenanceCalories + goalAdjustments[goal]
+    );
+  }
+
+  return { bmi, calorieGoal };
 }
 
 function normalizeUsdaSearchText(value) {
@@ -862,7 +964,7 @@ app.get("/profile-data", async (req,res)=>{
 
       supabase
       .from("Biometrics")
-      .select("age, goal, weight, height, bmi")
+      .select("age, sex, goal, activity_level, weight, height, bmi, calorie_goal")
       .eq("user_id", userId)
       .maybeSingle()
   ]);
@@ -878,12 +980,22 @@ app.get("/profile-data", async (req,res)=>{
     diets,
     selectedAllergyIds: userAllergies.map(a => a.allergy_id),
     selectedDietIds: userDiets.map(d => d.diet_preference_id),
-    biometrics: biometrics || {
+    biometrics: biometrics ? {
+      ...biometrics,
+      sex: normalizeSex(biometrics.sex) || "",
+      goal: normalizeGoal(biometrics.goal) || "",
+      activity_level: normalizeActivityLevel(biometrics.activity_level) || "",
+      bmi: biometrics.bmi ?? "",
+      calorie_goal: biometrics.calorie_goal ?? ""
+    } : {
       age: "",
+      sex: "",
       goal: "",
+      activity_level: "",
       weight: "",
       height: "",
-      bmi: ""
+      bmi: "",
+      calorie_goal: ""
     }
   });
 
@@ -898,30 +1010,22 @@ app.post("/profile-data", async (req, res) => {
 
   const { allergyIds = [], dietIds = [], biometrics = {} } = req.body;
 
-  const age =
-    biometrics.age === "" || biometrics.age == null
-      ? null
-      : Number(biometrics.age);
-
-  const goal =
-    biometrics.goal && String(biometrics.goal).trim() !== ""
-      ? String(biometrics.goal).trim()
-      : null;
-
-  const weight =
-    biometrics.weight === "" || biometrics.weight == null
-      ? null
-      : Number(biometrics.weight);
-
-  const height =
-    biometrics.height === "" || biometrics.height == null
-      ? null
-      : Number(biometrics.height);
-
-  let bmi = null;
-  if (weight && height && height > 0) {
-    bmi = Number((weight / Math.pow(height, 2)).toFixed(2));
-  }
+  const age = toPositiveInteger(biometrics.age);
+  const sex = normalizeSex(biometrics.sex);
+  const goal = normalizeGoal(biometrics.goal);
+  const activityLevel = normalizeActivityLevel(
+    biometrics.activityLevel ?? biometrics.activity_level
+  );
+  const weight = toPositiveNumber(biometrics.weight);
+  const height = toPositiveNumber(biometrics.height);
+  const { bmi, calorieGoal } = calculateBiometricsMetrics({
+    age,
+    sex,
+    weight,
+    height,
+    activityLevel,
+    goal
+  });
   // Remove old mappings
   const delA = await supabase
     .from("user_allergies")
@@ -977,10 +1081,13 @@ app.post("/profile-data", async (req, res) => {
       {
         user_id: userId,
         age,
+        sex,
         goal,
+        activity_level: activityLevel,
         weight,
         height,
-        bmi
+        bmi,
+        calorie_goal: calorieGoal
       },
       { onConflict: "user_id" }
     );
@@ -989,7 +1096,19 @@ app.post("/profile-data", async (req, res) => {
     console.error(bioUpsert.error);
     return res.status(500).json({ ok: false, message: "Server error" });
   }
-  return res.json({ ok: true });
+  return res.json({
+    ok: true,
+    biometrics: {
+      age: age ?? "",
+      sex: sex ?? "",
+      goal: goal ?? "",
+      activity_level: activityLevel ?? "",
+      weight: weight ?? "",
+      height: height ?? "",
+      bmi: bmi ?? "",
+      calorie_goal: calorieGoal ?? ""
+    }
+  });
 });
 
 // logout code
@@ -1085,7 +1204,8 @@ app.get("/meal-planner", async (req, res) => {
         title,
         description,
         prep_time,
-        cost
+        cost,
+        total_calories
       )
     `)
     .eq("user_id", userId)
@@ -1294,4 +1414,13 @@ app.post("/meal-planner", async (req, res) => {
     return res.status(500).json({ ok: false, message: "Server error" });
   }
 });
+export {
+  activityMultipliers,
+  goalAdjustments,
+  normalizeActivityLevel,
+  normalizeGoal,
+  normalizeSex,
+  calculateBiometricsMetrics
+};
+
 export default app;
