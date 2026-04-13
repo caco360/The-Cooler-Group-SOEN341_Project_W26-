@@ -1,5 +1,6 @@
 const form = document.getElementById("signupForm");
 const errorBox = document.getElementById("signupError");
+const loadingPath = "/loading/loading.html";
 
 form.addEventListener("submit", async (e) => {
 
@@ -43,8 +44,27 @@ form.addEventListener("submit", async (e) => {
       return;
     }
 
-    // Success → go to login
-    window.location.href = "/login/login.html";
+    const loginRes = await fetch("/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        username,
+        password
+      })
+    });
+
+    const loginData = await loginRes.json();
+
+    if (!loginData.ok || !loginData.redirectTo) {
+      errorBox.textContent = loginData.message || "Account created, but auto-login failed.";
+      return;
+    }
+
+    const next = encodeURIComponent(loginData.redirectTo);
+    const message = encodeURIComponent("Creating your account and opening your profile.");
+    window.location.href = `${loadingPath}?next=${next}&message=${message}`;
 
   } catch (err) {
     console.error(err);
