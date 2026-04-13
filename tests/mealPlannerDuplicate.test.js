@@ -6,7 +6,7 @@ describe("Meal Planner duplicate behavior", () => {
   const agent = request.agent(app);
   let recipe1, recipe2;
 
-  const WEEK = "2026-03-23";
+  const WEEK = `2026-03-${Math.floor(Math.random() * 20 + 1)}`;
 
   beforeAll(async () => {
     // login (same pattern as your other tests)
@@ -33,6 +33,30 @@ describe("Meal Planner duplicate behavior", () => {
 
     recipe1 = r1.body.recipe.id;
     recipe2 = r2.body.recipe.id;
+  });
+
+  afterAll(async () => {
+    await agent.post("/meal-planner").send({
+      recipe_id: null,
+      week_start_date: WEEK,
+      day_of_week: "monday",
+      meal_type: "lunch"
+    });
+
+    await agent.post("/meal-planner").send({
+      recipe_id: null,
+      week_start_date: WEEK,
+      day_of_week: "tuesday",
+      meal_type: "breakfast"
+    });
+
+    if (recipe1) {
+      await agent.delete(`/recipes/${recipe1}`);
+    }
+
+    if (recipe2) {
+      await agent.delete(`/recipes/${recipe2}`);
+    }
   });
 
   // -------------------------------

@@ -1,7 +1,27 @@
 document.addEventListener("DOMContentLoaded", init);
 
+const WEEK_DAYS = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday"
+];
+
 let currentWeekStart = "";
 let userRecipes = [];
+let plannerMeals = [];
+let calorieGoal = null;
+
+function getMealCalories(meal) {
+  return (
+    toFiniteNumber(meal?.recipes?.total_calories) ??
+    toFiniteNumber(meal?.recipes?.calories) ??
+    0
+  );
+}
 
 function init() {
   setupCurrentWeek();
@@ -9,6 +29,7 @@ function init() {
   bindSlots();
   bindModal();
   loadRecipesForDropdown();
+  loadCalorieGoal();
   loadPlannerMeals();
 }
 
@@ -17,8 +38,8 @@ function setupCurrentWeek() {
   const monday = getMonday(today);
   currentWeekStart = formatDate(monday);
   updateWeekLabel(monday);
-  loadPlannerMeals();
 }
+
 function parseLocalDate(dateStr) {
   const [y, m, d] = dateStr.split("-").map(Number);
   return new Date(y, m - 1, d);
@@ -134,6 +155,34 @@ async function loadRecipesForDropdown() {
   }
 }
 
+async function loadCalorieGoal() {
+  try {
+    const res = await fetch("/profile-data");
+
+    if (res.status === 401) {
+      window.location.href = "/login/login.html";
+      return;
+    }
+
+    const data = await res.json();
+
+    if (!data.ok) {
+      console.error("Could not load calorie goal");
+      calorieGoal = null;
+      renderDailyCalorieSummaries();
+      return;
+    }
+
+    calorieGoal = toFiniteNumber(data.biometrics?.calorie_goal);
+    renderDailyCalorieSummaries();
+
+  } catch (err) {
+    console.error("Calorie goal load error:", err);
+    calorieGoal = null;
+    renderDailyCalorieSummaries();
+  }
+}
+
 function renderRecipeOptions(recipes) {
   const select = document.getElementById("recipeSelect");
   if (!select) return;
@@ -235,8 +284,10 @@ async function loadPlannerMeals() {
       return;
     }
 
+    plannerMeals = data.meals || [];
     clearPlannerGrid();
-    renderPlannerMeals(data.meals || []);
+    renderPlannerMeals(plannerMeals);
+    renderDailyCalorieSummaries();
 
   } catch (err) {
     console.error("Planner load error:", err);
@@ -266,16 +317,91 @@ function renderPlannerMeals(meals) {
 
     const recipe = meal.recipes;
     const title = recipe?.title || "Untitled recipe";
+    const totalCalories = getMealCalories(meal);
+    const caloriesMarkup = totalCalories !== null
+      ? `<small>${formatCalories(totalCalories)} kcal</small>`
+      : "";
 
     slot.classList.remove("empty");
     slot.setAttribute("data-planner-id", meal.id);
     slot.innerHTML = `
       <div class="meal-card">
         ${title}
+        ${caloriesMarkup}
       </div>
     `;
   });
 }
+
+function renderDailyCalorieSummaries() {
+  WEEK_DAYS.forEach(day => {
+    const summaryCell = document.querySelector(`[data-day-summary="${day}"]`);
+
+    if (!summaryCell) return;
+
+    const dayTotal = plannerMeals
+      .filter(meal => meal.day_of_week === day)
+      .reduce((sum, meal) => sum + getMealCalories(meal), 0);
+
+    const hasGoal = Number.isFinite(calorieGoal) && calorieGoal > 0;
+    const progressPercent = hasGoal
+      ? Math.min((dayTotal / calorieGoal) * 100, 100)
+      : 0;
+
+    const summaryText = hasGoal
+      ? `${formatCalories(dayTotal)} / ${formatCalories(calorieGoal)} kcal`
+      : `${formatCalories(dayTotal)} kcal tracked`;
+
+    const note = hasGoal
+      ? getCalorieGoalNote(dayTotal, calorieGoal)
+      : "Set your calorie goal in Profile to track progress.";
+
+    summaryCell.classList.toggle("empty", !hasGoal && dayTotal === 0);
+    summaryCell.innerHTML = `
+      <div class="calorie-summary-header">
+        <span class="calorie-summary-label">${formatDayLabel(day)}</span>
+        <span class="calorie-summary-text">${summaryText}</span>
+      </div>
+      <div class="calorie-progress" aria-hidden="true">
+        <div class="calorie-progress-fill" style="width: ${progressPercent}%;"></div>
+      </div>
+      <div class="calorie-summary-note">${note}</div>
+    `;
+  });
+}
+
+function getCalorieGoalNote(total, goal) {
+  if (total === 0) {
+    return "No meals added yet.";
+  }
+
+  const difference = Math.round(goal - total);
+
+  if (difference > 0) {
+    return `${difference} kcal remaining`;
+  }
+
+  if (difference === 0) {
+    return "Goal reached";
+  }
+
+  return `${Math.abs(difference)} kcal over goal`;
+}
+
+function formatDayLabel(day) {
+  return day.slice(0, 3).toUpperCase();
+}
+
+function toFiniteNumber(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function formatCalories(value) {
+  const amount = Number(value) || 0;
+  return Number.isInteger(amount) ? amount.toString() : amount.toFixed(1);
+}
+
 async function removeMealFromPlanner() {
   const mealType = document.getElementById("mealTypeSelect")?.value;
   const day = document.getElementById("selectedDay")?.value;

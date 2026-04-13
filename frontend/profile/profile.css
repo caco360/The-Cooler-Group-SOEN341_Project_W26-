@@ -309,6 +309,11 @@ footer {
   box-shadow: 0 0 0 3px rgba(243,184,62,0.18);
 }
 
+.biometrics-input p,
+#calculateBMIBtn {
+  grid-column: 1 / -1;
+}
+
 #calculateBMIBtn {
   background: #91380c;
   color: white;

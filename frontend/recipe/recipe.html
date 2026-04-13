@@ -46,21 +46,43 @@
       </header>
 
       <section class="add-recipes-section">
-          <h2>Add A New Recipe</h2>
-          <div class="recipe-form">
+        <div class="add-recipes-header">
+          <button
+            id="toggleRecipeFormBtn"
+            class="btn-secondary"
+            type="button"
+            aria-expanded="false"
+            aria-controls="recipeFormPanel"
+          >
+            + Add Recipe
+          </button>
+        </div>
 
+        <div id="recipeFormPanel" class="recipe-form-panel" hidden>
+          <div class="recipe-form">
             <input type="text" id="titleInput" placeholder="Recipe title" />
             <input type="number" id="prepInput" placeholder="Prep time (minutes)" min="0" />
             <input type="number" id="costInput" placeholder="Cost ($)" min="0" step="0.01" />
-            <input type="number" id="caloriesInput" placeholder="Calories" min="0" />
             <textarea id="descInput" placeholder="Description"></textarea>
-            <select id="dietSelect">  <option value="">Loading...</option></select>
-            <textarea id="ingredientsInput" placeholder="Ingredients (one per line)"></textarea>
-            <button id="addRecipeBtn" class="btn-secondary" type="button"> Add Recipe </button>
+            <select id="dietSelect"><option value="">Loading...</option></select>
+
+            <div class="ingredient-builder">
+              <div class="ingredient-builder-header">
+                <div>
+                  <h3>Ingredients</h3>
+                  <p>Search USDA foods, choose one, then enter grams.</p>
+                </div>
+                <button id="addIngredientBtn" class="btn-secondary" type="button">+ Add ingredient</button>
+              </div>
+
+              <div id="ingredientRows" class="ingredient-rows"></div>
+            </div>
+
+            <button id="addRecipeBtn" class="btn-secondary" type="button">Add Recipe</button>
 
             <span id="createMsg" class="status"></span>
           </div>
-
+        </div>
       </section>
       
       <section class="recipes-section">

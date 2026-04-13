@@ -2,6 +2,22 @@ console.log("profile.js loaded");
 
 document.addEventListener("DOMContentLoaded", init);
 
+const activityMultipliers = {
+  no_exercise: 1.2,
+  light_1_2_days: 1.375,
+  moderate_3_5_days: 1.55,
+  intense_6_7_days: 1.725,
+  very_intense_job: 1.9
+};
+
+const goalAdjustments = {
+  high_weight_gain: 1000,
+  normal_weight_gain: 500,
+  maintain: 0,
+  normal_weight_loss: -500,
+  extreme_weight_loss: -1000
+};
+
 
 /* ======================
    INIT
@@ -24,6 +40,10 @@ function init() {
   document
     .getElementById("addDietBtn")
     .addEventListener("click", addDiet);
+
+  document
+    .getElementById("calculateBMIBtn")
+    .addEventListener("click", () => calculateHealthTargets(true));
 
   loadProfile();
 }
@@ -72,10 +92,13 @@ async function loadProfile() {
       data.selectedDietIds
     );
     document.getElementById("ageInput").value = data.biometrics?.age ?? "";
+    document.getElementById("sexSelect").value = data.biometrics?.sex ?? "";
     document.getElementById("goalSelect").value = data.biometrics?.goal ?? "";
+    document.getElementById("activityLevelSelect").value = data.biometrics?.activity_level ?? "";
     document.getElementById("weightInput").value = data.biometrics?.weight ?? "";
     document.getElementById("heightInput").value = data.biometrics?.height ?? "";
     document.getElementById("bmiResult").value = data.biometrics?.bmi ?? "";
+    document.getElementById("calorieGoalResult").value = data.biometrics?.calorie_goal ?? "";
   }
   catch (err) {
     console.error("Load failed:", err);
@@ -144,13 +167,16 @@ async function saveProfile() {
   msg.textContent = "Saving...";
   btn.disabled = true;
 
+  calculateHealthTargets(false);
 
   const payload = {
   allergyIds: getCheckedIds("allergiesBox"),
   dietIds: getCheckedIds("dietsBox"),
   biometrics: {
     age: document.getElementById("ageInput").value,
+    sex: document.getElementById("sexSelect").value,
     goal: document.getElementById("goalSelect").value,
+    activityLevel: document.getElementById("activityLevelSelect").value,
     weight: document.getElementById("weightInput").value,
     height: document.getElementById("heightInput").value
   }
@@ -167,11 +193,16 @@ async function saveProfile() {
 
     const data = await res.json();
 
-    msg.textContent = data.ok ? "Saved " : "Error ";
+    if (data.ok && data.biometrics) {
+      document.getElementById("bmiResult").value = data.biometrics.bmi ?? "";
+      document.getElementById("calorieGoalResult").value = data.biometrics.calorie_goal ?? "";
+    }
+
+    msg.textContent = data.ok ? "Saved" : "Error";
 
   }
   catch {
-    msg.textContent = "Server error ";
+    msg.textContent = "Server error";
   }
 
 
@@ -303,34 +334,75 @@ async function handleDeleteAccount() {
 }
 
 /* ============================
-   BMI Calculation Logic
+   BMI + CALORIE CALCULATION
 =============================== */
 
-document.addEventListener("DOMContentLoaded", () => {
-  const calculateBtn = document.getElementById("calculateBMIBtn");
-  const ageInput = document.getElementById("ageInput");
-  const weightInput = document.getElementById("weightInput");
-  const heightInput = document.getElementById("heightInput");
+function toPositiveNumber(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function calculateProfileMetrics({ age, sex, weight, height, activityLevel, goal }) {
+  let bmi = null;
+  let calorieGoal = null;
+
+  if (weight && height) {
+    bmi = Number((weight / Math.pow(height, 2)).toFixed(2));
+  }
+
+  if (
+    age &&
+    weight &&
+    height &&
+    sex &&
+    activityLevel &&
+    goal &&
+    activityMultipliers[activityLevel] &&
+    goalAdjustments[goal] !== undefined
+  ) {
+    const heightCm = height * 100;
+    const sexOffset = sex === "male" ? 5 : -161;
+    const bmr = (10 * weight) + (6.25 * heightCm) - (5 * age) + sexOffset;
+    const maintenanceCalories = bmr * activityMultipliers[activityLevel];
+
+    calorieGoal = Math.round(
+      maintenanceCalories + goalAdjustments[goal]
+    );
+  }
+
+  return { bmi, calorieGoal };
+}
+
+function calculateHealthTargets(showAlerts) {
+  const age = Math.trunc(toPositiveNumber(document.getElementById("ageInput").value) || 0);
+  const sex = document.getElementById("sexSelect").value;
+  const goal = document.getElementById("goalSelect").value;
+  const activityLevel = document.getElementById("activityLevelSelect").value;
+  const weight = toPositiveNumber(document.getElementById("weightInput").value);
+  const height = toPositiveNumber(document.getElementById("heightInput").value);
   const bmiResult = document.getElementById("bmiResult");
+  const calorieGoalResult = document.getElementById("calorieGoalResult");
 
-  calculateBtn.addEventListener("click", () => {
-    const age = parseInt(ageInput.value, 10) // age number value is in base 10
-    const weight = parseFloat(weightInput.value);
-    const height = parseFloat(heightInput.value);
+  if (showAlerts && age > 0 && age < 20) {
+    alert("Warning: Standard BMI and calorie calculations might not be fully accurate for users under 20 years old. Please consult a medical professional for more adequate dieting advice.");
+  }
 
-    // Triggers pop-up if user is under 20 years old
-    if (age < 20) {
-      alert("Warning: Standard BMI calculations might not be an accurate way to assess body weight health for users under 20 years old. Please consult a medical professional for more adequate dieting advice.");
-    }
-
-    // Basic validation
-    if (weight > 0 && height > 0) {
-      const bmi = weight / Math.pow(height, 2);
-      
-      // Rounding to 2 decimals
-      bmiResult.value = bmi.toFixed(2); 
-    } else {
-      bmiResult.value = "Invalid input";
-    }
+  const metrics = calculateProfileMetrics({
+    age,
+    sex,
+    weight,
+    height,
+    activityLevel,
+    goal
   });
-});
+
+  bmiResult.value = metrics.bmi ?? "";
+
+  if (metrics.calorieGoal !== null) {
+    calorieGoalResult.value = metrics.calorieGoal;
+  } else if (showAlerts && metrics.bmi !== null) {
+    calorieGoalResult.value = "Complete all fields";
+  } else {
+    calorieGoalResult.value = "";
+  }
+}

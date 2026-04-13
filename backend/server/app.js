@@ -9,6 +9,22 @@ import session from "express-session";
 const app = express();
 app.use(express.json());
 
+const USDA_CALORIE_NUTRIENT_ID = 1008;
+const activityMultipliers = {
+  no_exercise: 1.2,
+  light_1_2_days: 1.375,
+  moderate_3_5_days: 1.55,
+  intense_6_7_days: 1.725,
+  very_intense_job: 1.9
+};
+const goalAdjustments = {
+  high_weight_gain: 1000,
+  normal_weight_gain: 500,
+  maintain: 0,
+  normal_weight_loss: -500,
+  extreme_weight_loss: -1000
+};
+
 app.use(session({
   secret: process.env.SESSION_SECRET || "dev-secret",
   resave: false,
@@ -21,10 +37,10 @@ app.use(session({
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-app.use(express.static(path.join(__dirname, "../../frontend"))); 
+app.use(express.static(path.join(__dirname, "../../frontend"), { redirect: false })); 
 
 
-// Serve the main homepage at root -> Frontend/home/index.html
+// Serve the main homepage at root -> frontend/home/index.html
 app.get("/", (req, res) => {
   return res.sendFile(path.join(__dirname, "../../frontend/home/index.html"));
 });
@@ -161,6 +177,208 @@ app.get("/me", (req, res) => {
   });
 });
 
+function toFiniteNumber(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function toPositiveNumber(value) {
+  const num = toFiniteNumber(value);
+  return num !== null && num > 0 ? num : null;
+}
+
+function toPositiveInteger(value) {
+  const num = toPositiveNumber(value);
+  return num !== null ? Math.trunc(num) : null;
+}
+
+function normalizeSex(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+
+  if (normalized === "male" || normalized === "female") {
+    return normalized;
+  }
+
+  return null;
+}
+
+function normalizeGoal(value) {
+  const normalized = String(value || "").trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  const legacyGoalMap = {
+    weightLoss: "normal_weight_loss",
+    weightGain: "normal_weight_gain",
+    recomp: "maintain",
+    bulking: "high_weight_gain",
+    cutting: "normal_weight_loss",
+    rehab: "maintain",
+    fasting: "extreme_weight_loss",
+    maintenance: "maintain",
+    tracking: "maintain",
+    balance: "maintain"
+  };
+
+  if (goalAdjustments[normalized] !== undefined) {
+    return normalized;
+  }
+
+  return legacyGoalMap[normalized] || null;
+}
+
+function normalizeActivityLevel(value) {
+  const normalized = String(value || "").trim();
+
+  if (activityMultipliers[normalized]) {
+    return normalized;
+  }
+
+  return null;
+}
+
+function calculateBiometricsMetrics({ age, sex, weight, height, activityLevel, goal }) {
+  let bmi = null;
+  let calorieGoal = null;
+
+  if (weight && height) {
+    bmi = Number((weight / Math.pow(height, 2)).toFixed(2));
+  }
+
+  if (
+    age &&
+    weight &&
+    height &&
+    sex &&
+    activityLevel &&
+    goal &&
+    activityMultipliers[activityLevel] &&
+    goalAdjustments[goal] !== undefined
+  ) {
+    const heightCm = height * 100;
+    const sexOffset = sex === "male" ? 5 : -161;
+    const bmr = (10 * weight) + (6.25 * heightCm) - (5 * age) + sexOffset;
+    const maintenanceCalories = bmr * activityMultipliers[activityLevel];
+
+    calorieGoal = Math.round(
+      maintenanceCalories + goalAdjustments[goal]
+    );
+  }
+
+  return { bmi, calorieGoal };
+}
+
+function normalizeUsdaSearchText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function tokenizeUsdaSearch(query) {
+  return [...new Set(
+    normalizeUsdaSearchText(query)
+      .split(/\s+/)
+      .filter(token => token.length >= 2)
+  )];
+}
+
+function scoreUsdaFoodMatch(description, rawQuery, tokens) {
+  const normalizedDescription = normalizeUsdaSearchText(description);
+  const normalizedQuery = normalizeUsdaSearchText(rawQuery);
+
+  if (!normalizedDescription) {
+    return 0;
+  }
+
+  let score = 0;
+
+  if (normalizedQuery) {
+    if (normalizedDescription === normalizedQuery) score += 1000;
+    if (normalizedDescription.startsWith(normalizedQuery)) score += 600;
+    if (normalizedDescription.includes(normalizedQuery)) score += 300;
+  }
+
+  let allTokensMatch = tokens.length > 0;
+  let previousIndex = -1;
+
+  tokens.forEach((token) => {
+    const tokenIndex = normalizedDescription.indexOf(token);
+
+    if (tokenIndex === -1) {
+      allTokensMatch = false;
+      return;
+    }
+
+    score += 80;
+
+    if (normalizedDescription.startsWith(token) || normalizedDescription.includes(` ${token}`)) {
+      score += 25;
+    }
+
+    if (previousIndex !== -1 && tokenIndex > previousIndex) {
+      score += 20;
+    }
+
+    previousIndex = tokenIndex;
+  });
+
+  if (allTokensMatch) {
+    score += 250;
+  }
+
+  score += Math.max(0, 80 - normalizedDescription.length / 4);
+
+  return score;
+}
+
+async function getUsdaFoodLookupByIds(fdcIds) {
+  const uniqueIds = [...new Set(
+    fdcIds
+      .map(id => Number(id))
+      .filter(id => Number.isFinite(id))
+  )];
+
+  if (!uniqueIds.length) {
+    return {
+      foodMap: new Map(),
+      calorieMap: new Map()
+    };
+  }
+
+  const [foodsResult, caloriesResult] = await Promise.all([
+    supabase
+      .from("usda_foods")
+      .select("fdc_id, description")
+      .in("fdc_id", uniqueIds),
+
+    supabase
+      .from("usda_food_nutrients_1008")
+      .select("fdc_id, amount")
+      .eq("nutrient_id", USDA_CALORIE_NUTRIENT_ID)
+      .in("fdc_id", uniqueIds)
+  ]);
+
+  if (foodsResult.error) {
+    throw foodsResult.error;
+  }
+
+  if (caloriesResult.error) {
+    throw caloriesResult.error;
+  }
+
+  return {
+    foodMap: new Map((foodsResult.data || []).map(food => [Number(food.fdc_id), food])),
+    calorieMap: new Map((caloriesResult.data || []).map(row => [Number(row.fdc_id), Number(row.amount)]))
+  };
+}
+
 // ===============================
 // Get Logged-In User Recipes
 // ===============================
@@ -176,7 +394,7 @@ app.get("/my-recipes", async (req, res) => {
 
   const { data: recipes, error: recipesError } = await supabase
     .from("recipes")
-    .select("id, title, description, prep_time, ingredients, cost, diet_id")
+    .select("id, title, description, prep_time, ingredients, cost, diet_id, total_calories")
     .eq("user_id", userId)
     .order("id", { ascending: false });
 
@@ -209,6 +427,7 @@ app.get("/my-recipes", async (req, res) => {
 
   const recipesWithDiet = (recipes || []).map(r => ({
     ...r,
+    calories: r.total_calories ?? null,
     diet_name: r.diet_id ? (dietMap[r.diet_id] || null) : null
   }));
 
@@ -216,6 +435,97 @@ app.get("/my-recipes", async (req, res) => {
     ok: true,
     recipes: recipesWithDiet
   });
+});
+
+app.get("/api/usda-foods/search", async (req, res) => {
+  const query = String(req.query.q || "").trim();
+  const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 20);
+  const tokens = tokenizeUsdaSearch(query);
+
+  if (query.length < 2 || !tokens.length) {
+    return res.json({ ok: true, foods: [] });
+  }
+
+  const fetchSearchResults = async (candidateLimit, matchAllTokens = true) => {
+    let searchBuilder = supabase
+      .from("usda_foods")
+      .select("fdc_id, description");
+
+    if (matchAllTokens) {
+      tokens.forEach((token) => {
+        searchBuilder = searchBuilder.ilike("description", `%${token}%`);
+      });
+    } else {
+      const tokenFilters = tokens.map(token => `description.ilike.%${token}%`);
+      searchBuilder = searchBuilder.or(tokenFilters.join(","));
+    }
+
+    const { data: candidates, error: foodError } = await searchBuilder.limit(candidateLimit);
+
+    if (foodError) {
+      throw foodError;
+    }
+
+    const candidateIds = [...new Set(
+      (candidates || [])
+        .map(food => Number(food.fdc_id))
+        .filter(id => Number.isFinite(id))
+    )];
+
+    if (!candidateIds.length) {
+      return [];
+    }
+
+    const { calorieMap } = await getUsdaFoodLookupByIds(candidateIds);
+
+    return (candidates || [])
+      .map((food) => {
+        const fdcId = Number(food.fdc_id);
+        const calories = calorieMap.get(fdcId);
+
+        if (!Number.isFinite(fdcId) || !Number.isFinite(calories)) {
+          return null;
+        }
+
+        return {
+          fdc_id: fdcId,
+          description: food.description || "",
+          calories_per_100g: calories,
+          _score: scoreUsdaFoodMatch(food.description || "", query, tokens)
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) =>
+        b._score - a._score ||
+        a.description.localeCompare(b.description) ||
+        a.fdc_id - b.fdc_id
+      );
+  };
+
+  const candidateLimit = Math.min(Math.max(limit * 40, 180), 400);
+
+  let result;
+  try {
+    result = await fetchSearchResults(candidateLimit, true);
+
+    if (result.length < limit) {
+      const fallback = await fetchSearchResults(500, false);
+      const seenIds = new Set(result.map(food => food.fdc_id));
+
+      result = result.concat(
+        fallback.filter(food => !seenIds.has(food.fdc_id))
+      );
+    }
+  } catch (foodError) {
+    console.error("USDA SEARCH ERROR:", foodError);
+    return res.status(500).json({ ok: false, message: "Server error" });
+  }
+
+  result = result
+    .slice(0, limit)
+    .map(({ _score, ...food }) => food);
+
+  return res.json({ ok: true, foods: result });
 });
 
 // ===============================
@@ -264,16 +574,68 @@ app.put("/recipes/:id", async (req, res) => {
     return res.status(400).json({ ok: false, message: "Invalid recipe id" });
   }
 
-  const { title, description, prep_time, ingredients } = req.body;
+  const {
+    title,
+    description,
+    prep_time,
+    ingredients,
+    cost,
+    diet_id,
+    total_calories
+  } = req.body;
+
+  const updates = {};
+
+  if (title !== undefined) {
+    const cleanTitle = String(title).trim();
+    if (!cleanTitle) {
+      return res.status(400).json({ ok: false, message: "Title is required" });
+    }
+    updates.title = cleanTitle;
+  }
+
+  if (description !== undefined) {
+    updates.description = String(description).trim();
+  }
+
+  if (prep_time !== undefined) {
+    const time = toFiniteNumber(prep_time);
+    if (time !== null && time < 0) {
+      return res.status(400).json({ ok: false, message: "Invalid prep time" });
+    }
+    updates.prep_time = time;
+  }
+
+  if (ingredients !== undefined) {
+    if (!Array.isArray(ingredients)) {
+      return res.status(400).json({ ok: false, message: "Ingredients must be an array" });
+    }
+    updates.ingredients = ingredients.map(item => String(item).trim()).filter(Boolean);
+  }
+
+  if (cost !== undefined) {
+    const cleanCost = toFiniteNumber(cost);
+    if (cleanCost !== null && cleanCost < 0) {
+      return res.status(400).json({ ok: false, message: "Invalid cost" });
+    }
+    updates.cost = cleanCost;
+  }
+
+  if (diet_id !== undefined) {
+    updates.diet_id = toFiniteNumber(diet_id);
+  }
+
+  if (total_calories !== undefined) {
+    const cleanCalories = toFiniteNumber(total_calories);
+    if (cleanCalories !== null && cleanCalories < 0) {
+      return res.status(400).json({ ok: false, message: "Invalid calories" });
+    }
+    updates.total_calories = cleanCalories;
+  }
 
   const { error } = await supabase
     .from("recipes")
-    .update({
-      title,
-      description,
-      prep_time,
-      ingredients
-    })
+    .update(updates)
     .eq("id", recipeId)
     .eq("user_id", userId);   // very important: ownership check
 
@@ -287,66 +649,177 @@ app.put("/recipes/:id", async (req, res) => {
 
 
 app.post("/recipes", async (req, res) => {
-  const userId=req.session.userId;
-  if(!userId){
+  const userId = req.session.userId;
+  if (!userId) {
     return res.status(401).json({ ok: false, message: "Not logged in" });
   }
 
-  let{title,description="",prep_time=null,ingredients=[],cost=null,diet_id=null}=req.body;
-
-  if(!title|| typeof title !== "string" || !title.trim()){
-    return res.status(400).json({ok:false,message:"Title is required"})
-  }
-title = title.trim();
-description = typeof description === "string" ? description.trim() : "";
-
-if(prep_time!=null){
-  const time = Number(prep_time); //cast to integer
-  if(!Number.isFinite(time) || time<0){
-    return res.status(400).json({ok:false,message:"Invalid prep time"})
-  }
-  prep_time=time;
-}
-
-if(cost!=null){
-  const temp_cost = Number(cost); //cast to integer
-  if(!Number.isFinite(temp_cost) || temp_cost<0){
-    return res.status(400).json({ok:false,message:"Invalid cost"})
-  }
-  cost=temp_cost;
-}
- if (!Array.isArray(ingredients)) {
-    return res.status(400).json({
-      ok: false,
-      message: "Ingredients must be an array"
-    });
-  }
-ingredients = ingredients.map(x => String(x).trim());
-
-try{
-  const{data,err} = await supabase.from("recipes").insert([{
-    user_id:userId,
+  let {
     title,
-    description,
-    prep_time,
-    ingredients,
-    cost,
-    diet_id
-  }])
-  .select().single();
-  if (err) {
-      console.error(err);
+    description = "",
+    prep_time = null,
+    ingredients = [],
+    ingredientRows = [],
+    cost = null,
+    diet_id = null,
+    calories = null
+  } = req.body;
+
+  if (!title || typeof title !== "string" || !title.trim()) {
+    return res.status(400).json({ ok: false, message: "Title is required" });
+  }
+  title = title.trim();
+  description = typeof description === "string" ? description.trim() : "";
+
+  const cleanPrepTime = toFiniteNumber(prep_time);
+  if (cleanPrepTime !== null && cleanPrepTime < 0) {
+    return res.status(400).json({ ok: false, message: "Invalid prep time" });
+  }
+  prep_time = cleanPrepTime;
+
+  const cleanCost = toFiniteNumber(cost);
+  if (cleanCost !== null && cleanCost < 0) {
+    return res.status(400).json({ ok: false, message: "Invalid cost" });
+  }
+  cost = cleanCost;
+
+  const cleanDietId = toFiniteNumber(diet_id);
+  diet_id = cleanDietId;
+
+  const rawStructuredRows = Array.isArray(ingredientRows) ? ingredientRows : [];
+  const legacyIngredients = Array.isArray(ingredients) ? ingredients : [];
+  let structuredRows = [];
+  let totalCalories = toFiniteNumber(calories);
+
+  if (rawStructuredRows.length) {
+    const normalizedRows = rawStructuredRows.map((row, index) => {
+      const usdaFoodId = toFiniteNumber(row?.usda_food_id);
+      const quantityG = toFiniteNumber(row?.quantity_g);
+      const sortOrder = toFiniteNumber(row?.sort_order) ?? index + 1;
+      const ingredientNameSnapshot = String(
+        row?.ingredient_name_snapshot || row?.food_name || row?.description || ""
+      ).trim();
+
+      if (!usdaFoodId) {
+        throw new Error("Each ingredient must include a USDA food id");
+      }
+
+      if (!quantityG || quantityG <= 0) {
+        throw new Error("Each ingredient must include a quantity in grams");
+      }
+
+      return {
+        usda_food_id: usdaFoodId,
+        quantity_g: quantityG,
+        sort_order: sortOrder,
+        ingredient_name_snapshot: ingredientNameSnapshot
+      };
+    });
+
+    try {
+      const { foodMap, calorieMap } = await getUsdaFoodLookupByIds(
+        normalizedRows.map(row => row.usda_food_id)
+      );
+
+      structuredRows = normalizedRows.map(row => {
+        const food = foodMap.get(row.usda_food_id);
+        const caloriesPer100g = calorieMap.get(row.usda_food_id);
+
+        if (!food) {
+          throw new Error("One or more selected USDA foods could not be found");
+        }
+
+        if (!Number.isFinite(caloriesPer100g)) {
+          throw new Error(`Calories are missing for ${food.description}`);
+        }
+
+        const calculatedCalories = Number(((row.quantity_g / 100) * caloriesPer100g).toFixed(2));
+
+        return {
+          recipe_id: null,
+          usda_food_id: row.usda_food_id,
+          ingredient_name_snapshot: row.ingredient_name_snapshot || food.description,
+          quantity_g: row.quantity_g,
+          calculated_calories: calculatedCalories,
+          sort_order: row.sort_order,
+          calories_per_100g: caloriesPer100g
+        };
+      });
+
+      totalCalories = structuredRows.reduce((sum, row) => sum + Number(row.calculated_calories || 0), 0);
+      totalCalories = Number(totalCalories.toFixed(2));
+
+      ingredients = structuredRows.map(row => row.ingredient_name_snapshot);
+    } catch (error) {
+      if (error instanceof Error) {
+        return res.status(400).json({ ok: false, message: error.message });
+      }
+      console.error(error);
+      return res.status(500).json({ ok: false, message: "Server error" });
+    }
+  } else {
+    ingredients = legacyIngredients.map(x => String(x).trim()).filter(Boolean);
+
+    if (!Number.isFinite(totalCalories)) {
+      totalCalories = null;
+    }
+  }
+
+  try {
+    const { data: recipe, error: insertError } = await supabase
+      .from("recipes")
+      .insert([{
+        user_id: userId,
+        title,
+        description,
+        prep_time,
+        ingredients,
+        cost,
+        diet_id,
+        total_calories: totalCalories
+      }])
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error(insertError);
       return res.status(500).json({
         ok: false,
         message: "Insert failed"
       });
     }
 
+    if (structuredRows.length) {
+      const ingredientInsertRows = structuredRows.map(row => ({
+        recipe_id: recipe.id,
+        usda_food_id: row.usda_food_id,
+        ingredient_name_snapshot: row.ingredient_name_snapshot,
+        quantity_g: row.quantity_g,
+        calculated_calories: row.calculated_calories,
+        sort_order: row.sort_order
+      }));
+
+      const { error: ingredientError } = await supabase
+        .from("recipe_ingredients")
+        .insert(ingredientInsertRows);
+
+      if (ingredientError) {
+        console.error(ingredientError);
+        await supabase.from("recipes").delete().eq("id", recipe.id);
+        return res.status(500).json({
+          ok: false,
+          message: "Could not save recipe ingredients"
+        });
+      }
+    }
+
     return res.status(201).json({
       ok: true,
-      recipe: data
+      recipe: {
+        ...recipe,
+        total_calories: recipe.total_calories ?? totalCalories ?? null
+      }
     });
-
   } catch (err) {
     console.error(err);
     return res.status(500).json({
@@ -491,7 +964,7 @@ app.get("/profile-data", async (req,res)=>{
 
       supabase
       .from("biometrics")
-      .select("age, goal, weight, height, bmi")
+      .select("age, sex, goal, activity_level, weight, height, bmi, calorie_goal")
       .eq("user_id", userId)
       .maybeSingle()
   ]);
@@ -507,12 +980,22 @@ app.get("/profile-data", async (req,res)=>{
     diets,
     selectedAllergyIds: userAllergies.map(a => a.allergy_id),
     selectedDietIds: userDiets.map(d => d.diet_preference_id),
-    biometrics: biometrics || {
+    biometrics: biometrics ? {
+      ...biometrics,
+      sex: normalizeSex(biometrics.sex) || "",
+      goal: normalizeGoal(biometrics.goal) || "",
+      activity_level: normalizeActivityLevel(biometrics.activity_level) || "",
+      bmi: biometrics.bmi ?? "",
+      calorie_goal: biometrics.calorie_goal ?? ""
+    } : {
       age: "",
+      sex: "",
       goal: "",
+      activity_level: "",
       weight: "",
       height: "",
-      bmi: ""
+      bmi: "",
+      calorie_goal: ""
     }
   });
 
@@ -527,30 +1010,22 @@ app.post("/profile-data", async (req, res) => {
 
   const { allergyIds = [], dietIds = [], biometrics = {} } = req.body;
 
-  const age =
-    biometrics.age === "" || biometrics.age == null
-      ? null
-      : Number(biometrics.age);
-
-  const goal =
-    biometrics.goal && String(biometrics.goal).trim() !== ""
-      ? String(biometrics.goal).trim()
-      : null;
-
-  const weight =
-    biometrics.weight === "" || biometrics.weight == null
-      ? null
-      : Number(biometrics.weight);
-
-  const height =
-    biometrics.height === "" || biometrics.height == null
-      ? null
-      : Number(biometrics.height);
-
-  let bmi = null;
-  if (weight && height && height > 0) {
-    bmi = Number((weight / Math.pow(height, 2)).toFixed(2));
-  }
+  const age = toPositiveInteger(biometrics.age);
+  const sex = normalizeSex(biometrics.sex);
+  const goal = normalizeGoal(biometrics.goal);
+  const activityLevel = normalizeActivityLevel(
+    biometrics.activityLevel ?? biometrics.activity_level
+  );
+  const weight = toPositiveNumber(biometrics.weight);
+  const height = toPositiveNumber(biometrics.height);
+  const { bmi, calorieGoal } = calculateBiometricsMetrics({
+    age,
+    sex,
+    weight,
+    height,
+    activityLevel,
+    goal
+  });
   // Remove old mappings
   const delA = await supabase
     .from("user_allergies")
@@ -606,10 +1081,13 @@ app.post("/profile-data", async (req, res) => {
       {
         user_id: userId,
         age,
+        sex,
         goal,
+        activity_level: activityLevel,
         weight,
         height,
-        bmi
+        bmi,
+        calorie_goal: calorieGoal
       },
       { onConflict: "user_id" }
     );
@@ -618,7 +1096,19 @@ app.post("/profile-data", async (req, res) => {
     console.error(bioUpsert.error);
     return res.status(500).json({ ok: false, message: "Server error" });
   }
-  return res.json({ ok: true });
+  return res.json({
+    ok: true,
+    biometrics: {
+      age: age ?? "",
+      sex: sex ?? "",
+      goal: goal ?? "",
+      activity_level: activityLevel ?? "",
+      weight: weight ?? "",
+      height: height ?? "",
+      bmi: bmi ?? "",
+      calorie_goal: calorieGoal ?? ""
+    }
+  });
 });
 
 // logout code
@@ -714,7 +1204,8 @@ app.get("/meal-planner", async (req, res) => {
         title,
         description,
         prep_time,
-        cost
+        cost,
+        total_calories
       )
     `)
     .eq("user_id", userId)
@@ -923,4 +1414,13 @@ app.post("/meal-planner", async (req, res) => {
     return res.status(500).json({ ok: false, message: "Server error" });
   }
 });
+export {
+  activityMultipliers,
+  goalAdjustments,
+  normalizeActivityLevel,
+  normalizeGoal,
+  normalizeSex,
+  calculateBiometricsMetrics
+};
+
 export default app;
