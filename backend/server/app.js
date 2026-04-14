@@ -379,6 +379,73 @@ async function getUsdaFoodLookupByIds(fdcIds) {
   };
 }
 
+function normalizeStructuredIngredientRows(rawRows) {
+  return rawRows.map((row, index) => {
+    const usdaFoodId = toFiniteNumber(row?.usda_food_id);
+    const quantityG = toFiniteNumber(row?.quantity_g);
+    const sortOrder = toFiniteNumber(row?.sort_order) ?? index + 1;
+    const ingredientNameSnapshot = String(
+      row?.ingredient_name_snapshot || row?.food_name || row?.description || ""
+    ).trim();
+
+    if (!usdaFoodId) {
+      throw new Error("Each ingredient must include a USDA food id");
+    }
+
+    if (!quantityG || quantityG <= 0) {
+      throw new Error("Each ingredient must include a quantity in grams");
+    }
+
+    return {
+      usda_food_id: usdaFoodId,
+      quantity_g: quantityG,
+      sort_order: sortOrder,
+      ingredient_name_snapshot: ingredientNameSnapshot
+    };
+  });
+}
+
+async function buildStructuredRecipeIngredients(rawRows) {
+  const normalizedRows = normalizeStructuredIngredientRows(rawRows);
+  const { foodMap, calorieMap } = await getUsdaFoodLookupByIds(
+    normalizedRows.map(row => row.usda_food_id)
+  );
+
+  const structuredRows = normalizedRows.map(row => {
+    const food = foodMap.get(row.usda_food_id);
+    const caloriesPer100g = calorieMap.get(row.usda_food_id);
+
+    if (!food) {
+      throw new Error("One or more selected USDA foods could not be found");
+    }
+
+    if (!Number.isFinite(caloriesPer100g)) {
+      throw new Error(`Calories are missing for ${food.description}`);
+    }
+
+    const calculatedCalories = Number(((row.quantity_g / 100) * caloriesPer100g).toFixed(2));
+
+    return {
+      usda_food_id: row.usda_food_id,
+      ingredient_name_snapshot: row.ingredient_name_snapshot || food.description,
+      quantity_g: row.quantity_g,
+      calculated_calories: calculatedCalories,
+      sort_order: row.sort_order,
+      calories_per_100g: caloriesPer100g
+    };
+  });
+
+  const totalCalories = Number(
+    structuredRows.reduce((sum, row) => sum + Number(row.calculated_calories || 0), 0).toFixed(2)
+  );
+
+  return {
+    structuredRows,
+    totalCalories,
+    ingredientNames: structuredRows.map(row => row.ingredient_name_snapshot)
+  };
+}
+
 // ===============================
 // Get Logged-In User Recipes
 // ===============================
@@ -403,6 +470,10 @@ app.get("/my-recipes", async (req, res) => {
     return res.status(500).json({ ok: false, message: "Server error" });
   }
 
+  const recipeIds = (recipes || [])
+    .map(recipe => Number(recipe.id))
+    .filter(id => Number.isFinite(id));
+
   const dietIds = [...new Set(
     (recipes || [])
       .map(r => r.diet_id)
@@ -425,10 +496,44 @@ app.get("/my-recipes", async (req, res) => {
     dietMap = Object.fromEntries(diets.map(d => [d.id, d.name]));
   }
 
+  let ingredientRowsByRecipeId = {};
+
+  if (recipeIds.length) {
+    const { data: ingredientRows, error: ingredientRowsError } = await supabase
+      .from("recipe_ingredients")
+      .select("recipe_id, usda_food_id, ingredient_name_snapshot, quantity_g, calculated_calories, sort_order")
+      .in("recipe_id", recipeIds)
+      .order("sort_order", { ascending: true });
+
+    if (ingredientRowsError) {
+      console.error("ingredientRowsError:", ingredientRowsError);
+      return res.status(500).json({ ok: false, message: "Server error" });
+    }
+
+    ingredientRowsByRecipeId = (ingredientRows || []).reduce((acc, row) => {
+      const recipeId = Number(row.recipe_id);
+
+      if (!acc[recipeId]) {
+        acc[recipeId] = [];
+      }
+
+      acc[recipeId].push({
+        usda_food_id: Number(row.usda_food_id),
+        ingredient_name_snapshot: row.ingredient_name_snapshot || "",
+        quantity_g: Number(row.quantity_g),
+        calculated_calories: Number(row.calculated_calories),
+        sort_order: Number(row.sort_order)
+      });
+
+      return acc;
+    }, {});
+  }
+
   const recipesWithDiet = (recipes || []).map(r => ({
     ...r,
     calories: r.total_calories ?? null,
-    diet_name: r.diet_id ? (dietMap[r.diet_id] || null) : null
+    diet_name: r.diet_id ? (dietMap[r.diet_id] || null) : null,
+    ingredient_rows: ingredientRowsByRecipeId[Number(r.id)] || []
   }));
 
   return res.json({
@@ -579,12 +684,15 @@ app.put("/recipes/:id", async (req, res) => {
     description,
     prep_time,
     ingredients,
+    ingredientRows,
     cost,
     diet_id,
     total_calories
   } = req.body;
+  const hasIngredientRows = Object.prototype.hasOwnProperty.call(req.body, "ingredientRows");
 
   const updates = {};
+  let structuredRows = null;
 
   if (title !== undefined) {
     const cleanTitle = String(title).trim();
@@ -633,6 +741,45 @@ app.put("/recipes/:id", async (req, res) => {
     updates.total_calories = cleanCalories;
   }
 
+  if (hasIngredientRows) {
+    if (!Array.isArray(ingredientRows)) {
+      return res.status(400).json({ ok: false, message: "Ingredients must be an array" });
+    }
+
+    if (!ingredientRows.length) {
+      return res.status(400).json({ ok: false, message: "Add at least one ingredient row." });
+    }
+
+    try {
+      const structuredIngredientData = await buildStructuredRecipeIngredients(ingredientRows);
+      structuredRows = structuredIngredientData.structuredRows;
+      updates.ingredients = structuredIngredientData.ingredientNames;
+      updates.total_calories = structuredIngredientData.totalCalories;
+    } catch (error) {
+      if (error instanceof Error) {
+        return res.status(400).json({ ok: false, message: error.message });
+      }
+      console.error(error);
+      return res.status(500).json({ ok: false, message: "Server error" });
+    }
+  }
+
+  const { data: existingRecipe, error: existingRecipeError } = await supabase
+    .from("recipes")
+    .select("id")
+    .eq("id", recipeId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (existingRecipeError) {
+    console.error(existingRecipeError);
+    return res.status(500).json({ ok: false, message: "Server error" });
+  }
+
+  if (!existingRecipe) {
+    return res.status(404).json({ ok: false, message: "Recipe not found" });
+  }
+
   const { error } = await supabase
     .from("recipes")
     .update(updates)
@@ -642,6 +789,36 @@ app.put("/recipes/:id", async (req, res) => {
   if (error) {
     console.error(error);
     return res.status(500).json({ ok: false, message: "Server error" });
+  }
+
+  if (structuredRows) {
+    const { error: deleteIngredientError } = await supabase
+      .from("recipe_ingredients")
+      .delete()
+      .eq("recipe_id", recipeId);
+
+    if (deleteIngredientError) {
+      console.error(deleteIngredientError);
+      return res.status(500).json({ ok: false, message: "Could not update recipe ingredients" });
+    }
+
+    const ingredientInsertRows = structuredRows.map(row => ({
+      recipe_id: recipeId,
+      usda_food_id: row.usda_food_id,
+      ingredient_name_snapshot: row.ingredient_name_snapshot,
+      quantity_g: row.quantity_g,
+      calculated_calories: row.calculated_calories,
+      sort_order: row.sort_order
+    }));
+
+    const { error: insertIngredientError } = await supabase
+      .from("recipe_ingredients")
+      .insert(ingredientInsertRows);
+
+    if (insertIngredientError) {
+      console.error(insertIngredientError);
+      return res.status(500).json({ ok: false, message: "Could not update recipe ingredients" });
+    }
   }
 
   return res.json({ ok: true });
@@ -692,64 +869,11 @@ app.post("/recipes", async (req, res) => {
   let totalCalories = toFiniteNumber(calories);
 
   if (rawStructuredRows.length) {
-    const normalizedRows = rawStructuredRows.map((row, index) => {
-      const usdaFoodId = toFiniteNumber(row?.usda_food_id);
-      const quantityG = toFiniteNumber(row?.quantity_g);
-      const sortOrder = toFiniteNumber(row?.sort_order) ?? index + 1;
-      const ingredientNameSnapshot = String(
-        row?.ingredient_name_snapshot || row?.food_name || row?.description || ""
-      ).trim();
-
-      if (!usdaFoodId) {
-        throw new Error("Each ingredient must include a USDA food id");
-      }
-
-      if (!quantityG || quantityG <= 0) {
-        throw new Error("Each ingredient must include a quantity in grams");
-      }
-
-      return {
-        usda_food_id: usdaFoodId,
-        quantity_g: quantityG,
-        sort_order: sortOrder,
-        ingredient_name_snapshot: ingredientNameSnapshot
-      };
-    });
-
     try {
-      const { foodMap, calorieMap } = await getUsdaFoodLookupByIds(
-        normalizedRows.map(row => row.usda_food_id)
-      );
-
-      structuredRows = normalizedRows.map(row => {
-        const food = foodMap.get(row.usda_food_id);
-        const caloriesPer100g = calorieMap.get(row.usda_food_id);
-
-        if (!food) {
-          throw new Error("One or more selected USDA foods could not be found");
-        }
-
-        if (!Number.isFinite(caloriesPer100g)) {
-          throw new Error(`Calories are missing for ${food.description}`);
-        }
-
-        const calculatedCalories = Number(((row.quantity_g / 100) * caloriesPer100g).toFixed(2));
-
-        return {
-          recipe_id: null,
-          usda_food_id: row.usda_food_id,
-          ingredient_name_snapshot: row.ingredient_name_snapshot || food.description,
-          quantity_g: row.quantity_g,
-          calculated_calories: calculatedCalories,
-          sort_order: row.sort_order,
-          calories_per_100g: caloriesPer100g
-        };
-      });
-
-      totalCalories = structuredRows.reduce((sum, row) => sum + Number(row.calculated_calories || 0), 0);
-      totalCalories = Number(totalCalories.toFixed(2));
-
-      ingredients = structuredRows.map(row => row.ingredient_name_snapshot);
+      const structuredIngredientData = await buildStructuredRecipeIngredients(rawStructuredRows);
+      structuredRows = structuredIngredientData.structuredRows;
+      totalCalories = structuredIngredientData.totalCalories;
+      ingredients = structuredIngredientData.ingredientNames;
     } catch (error) {
       if (error instanceof Error) {
         return res.status(400).json({ ok: false, message: error.message });
@@ -1226,7 +1350,7 @@ app.get("/meal-planner", async (req, res) => {
   });
 });
 
-// leave this code commented for reference - the logic here is now handled in a single query with Postgres "ON CONFLICT" (using Supabase)which simplifies the code and reduces potential bugs
+
 // app.post("/meal-planner", async (req, res) => {
 //   const userId = req.session.userId;
 
