@@ -1226,7 +1226,7 @@ app.get("/meal-planner", async (req, res) => {
   });
 });
 
-
+// leave this code commented for reference - the logic here is now handled in a single query with Postgres "ON CONFLICT" (using Supabase)which simplifies the code and reduces potential bugs
 // app.post("/meal-planner", async (req, res) => {
 //   const userId = req.session.userId;
 
