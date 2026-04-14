@@ -68,52 +68,12 @@ function init() {
   const filterBtn = document.getElementById("filterBtn");
   const modal = document.getElementById("filterModal");
   const nameField = document.getElementById("filterName");
-  const costRangeField = document.getElementById("filterCostRange");
-  const costValueLabel = document.getElementById("filterCostValue");
-  const timeRangeField = document.getElementById("filterTimeRange");
-  const timeValueLabel = document.getElementById("filterTimeValue");
+  const costMinField = document.getElementById("filterCostMin");
+  const costMaxField = document.getElementById("filterCostMax");
+  const timeMinField = document.getElementById("filterTimeMin");
+  const timeMaxField = document.getElementById("filterTimeMax");
   const applyBtn = document.getElementById("applyFilterBtn");
   const cancelBtn = document.getElementById("cancelFilterBtn");
-
-  function formatCostSliderValue(value) {
-    const numericValue = Number(value);
-    if (!Number.isFinite(numericValue) || numericValue >= 101) {
-      return "$100+";
-    }
-
-    return `$${numericValue}`;
-  }
-
-  function syncCostSliderLabel() {
-    if (costValueLabel && costRangeField) {
-      costValueLabel.textContent = formatCostSliderValue(costRangeField.value);
-    }
-  }
-
-  function formatTimeSliderValue(value) {
-    const numericValue = Number(value);
-    if (!Number.isFinite(numericValue) || numericValue >= 121) {
-      return "120+ min";
-    }
-
-    return `${numericValue} min`;
-  }
-
-  function syncTimeSliderLabel() {
-    if (timeValueLabel && timeRangeField) {
-      timeValueLabel.textContent = formatTimeSliderValue(timeRangeField.value);
-    }
-  }
-
-  if (costRangeField) {
-    costRangeField.addEventListener("input", syncCostSliderLabel);
-    syncCostSliderLabel();
-  }
-
-  if (timeRangeField) {
-    timeRangeField.addEventListener("input", syncTimeSliderLabel);
-    syncTimeSliderLabel();
-  }
 
   function closeModal() {
     if (!modal) return;
@@ -125,10 +85,10 @@ function init() {
     filterBtn.addEventListener("click", () => {
       const searchEl = document.getElementById("recipeSearch");
       if (nameField) nameField.value = (searchEl?.value || "").trim();
-      if (costRangeField) costRangeField.value = "101";
-      if (timeRangeField) timeRangeField.value = "121";
-      syncCostSliderLabel();
-      syncTimeSliderLabel();
+      if (costMinField) costMinField.value = "";
+      if (costMaxField) costMaxField.value = "";
+      if (timeMinField) timeMinField.value = "";
+      if (timeMaxField) timeMaxField.value = "";
       modal.classList.add("open");
       if (nameField) nameField.focus();
     });
@@ -137,16 +97,16 @@ function init() {
   if (applyBtn) {
     applyBtn.addEventListener("click", () => {
       const nameQ = (nameField?.value || "").trim();
-      const max = costRangeField ? Number(costRangeField.value) : null;
-      const normalizedMax = max !== null && max >= 101 ? null : max;
-      const timeMax = timeRangeField ? Number(timeRangeField.value) : null;
-      const normalizedTimeMax = timeMax !== null && timeMax >= 121 ? null : timeMax;
+      const min = costMinField?.value === "" ? null : costMinField?.value;
+      const max = costMaxField?.value === "" ? null : costMaxField?.value;
+      const tMin = timeMinField?.value === "" ? null : timeMinField?.value;
+      const tMax = timeMaxField?.value === "" ? null : timeMaxField?.value;
 
       const mainSearch = document.getElementById("recipeSearch");
       if (mainSearch) mainSearch.value = nameQ;
 
       closeModal();
-      renderRecipes(window._recipes || [], nameQ, null, normalizedMax, false, null, normalizedTimeMax);
+      renderRecipes(window._recipes || [], nameQ, min, max, false, tMin, tMax);
       filterBtn?.focus();
     });
   }
@@ -155,10 +115,10 @@ function init() {
     cancelBtn.addEventListener("click", () => {
       closeModal();
       if (nameField) nameField.value = "";
-      if (costRangeField) costRangeField.value = "101";
-      if (timeRangeField) timeRangeField.value = "121";
-      syncCostSliderLabel();
-      syncTimeSliderLabel();
+      if (costMinField) costMinField.value = "";
+      if (costMaxField) costMaxField.value = "";
+      if (timeMinField) timeMinField.value = "";
+      if (timeMaxField) timeMaxField.value = "";
 
       const mainSearch = document.getElementById("recipeSearch");
       if (mainSearch) mainSearch.value = "";
@@ -207,41 +167,6 @@ function formatCalories(value) {
   return `${num.toFixed(0)} kcal`;
 }
 
-function renderRecipesEmptyState({ title, copy, actionLabel = "", action = "" }) {
-  const statusEl = document.getElementById("status");
-  const grid = document.getElementById("recipesGrid");
-
-  if (statusEl) statusEl.textContent = "";
-  if (!grid) return;
-
-  grid.innerHTML = `
-    <article class="empty-state-card">
-      <div class="empty-state-illustration" aria-hidden="true"></div>
-      <h3 class="empty-state-title">${escapeHtml(title)}</h3>
-      <p class="empty-state-copy">${escapeHtml(copy)}</p>
-      ${actionLabel ? `<button class="btn-secondary empty-state-action" type="button" data-empty-action="${escapeHtml(action)}">${escapeHtml(actionLabel)}</button>` : ""}
-    </article>
-  `;
-
-  const actionBtn = grid.querySelector("[data-empty-action]");
-  if (!actionBtn) return;
-
-  actionBtn.addEventListener("click", () => {
-    const actionName = actionBtn.dataset.emptyAction;
-
-    if (actionName === "open-form") {
-      setRecipeFormOpen(true);
-      return;
-    }
-
-    if (actionName === "clear-search") {
-      const searchEl = document.getElementById("recipeSearch");
-      if (searchEl) searchEl.value = "";
-      renderRecipes(window._recipes || [], "", null, null);
-    }
-  });
-}
-
 async function loadRecipes() {
   const statusEl = document.getElementById("status");
   const grid = document.getElementById("recipesGrid");
@@ -280,12 +205,8 @@ async function loadRecipes() {
     window._recipes = recipes;
 
     if (!recipes.length) {
-      renderRecipesEmptyState({
-        title: "Your recipe box is still empty",
-        copy: "Start with one simple meal you actually make often, then build your collection from there.",
-        actionLabel: "Add Your First Recipe",
-        action: "open-form"
-      });
+      if (statusEl) statusEl.textContent = "No recipes saved yet.";
+      if (grid) grid.innerHTML = "";
       return;
     }
 
@@ -355,21 +276,10 @@ function renderRecipes(
   });
 
   if (!filtered.length) {
-    renderRecipesEmptyState(
-      recipes.length
-        ? {
-            title: "No recipes match this filter",
-            copy: "Try loosening the search or filter settings to bring more meals back into view.",
-            actionLabel: "Clear Search",
-            action: "clear-search"
-          }
-        : {
-            title: "Your recipe box is still empty",
-            copy: "Start with one simple meal you actually make often, then build your collection from there.",
-            actionLabel: "Add Your First Recipe",
-            action: "open-form"
-          }
-    );
+    if (statusEl) {
+      statusEl.textContent = recipes.length ? "No recipes match your search." : "No recipes saved yet.";
+    }
+    if (grid) grid.innerHTML = "";
     return;
   }
 
@@ -532,6 +442,7 @@ function startEdit(recipeId) {
 
   const titleEl = card.querySelector(".recipe-title");
   const descEl = card.querySelector(".recipe-desc");
+  const ingredientsBlock = card.querySelector(".ingredients-block");
   const badges = card.querySelectorAll(".prep-badge");
   const prepEl = badges[0];
 
@@ -551,6 +462,45 @@ function startEdit(recipeId) {
     `;
   }
 
+  if (ingredientsBlock) {
+    const existingIngredientRows = Array.isArray(recipe.ingredient_rows)
+      ? recipe.ingredient_rows
+      : [];
+    const legacyIngredients = Array.isArray(recipe.ingredients)
+      ? recipe.ingredients.filter(Boolean)
+      : [];
+    const helperText = existingIngredientRows.length
+      ? "Search USDA foods, adjust grams, and save to recalculate calories."
+      : (legacyIngredients.length
+          ? `This recipe needs USDA-linked ingredients to recalculate calories. Re-select these ingredients and grams: ${escapeHtml(legacyIngredients.join(", "))}`
+          : "Search USDA foods, choose one, then enter grams.");
+
+    ingredientsBlock.outerHTML = `
+      <div class="ingredients-block ingredients-block-editor">
+        <div class="ingredient-builder-header ingredient-builder-header-inline">
+          <div>
+            <div class="ingredients-label">Ingredients</div>
+            <p class="ingredient-edit-note">${helperText}</p>
+          </div>
+          <button type="button" class="btn-secondary edit-add-ingredient-btn">+ Add ingredient</button>
+        </div>
+        <div class="ingredient-rows edit-ingredient-rows"></div>
+      </div>
+    `;
+
+    const editIngredientContainer = card.querySelector(".edit-ingredient-rows");
+    const addIngredientButton = card.querySelector(".edit-add-ingredient-btn");
+    const initialRows = existingIngredientRows.length
+      ? existingIngredientRows
+      : (legacyIngredients.length ? legacyIngredients.map((name) => ({ foodName: name })) : [{}]);
+
+    initialRows.forEach((row) => addIngredientRow(row, editIngredientContainer));
+
+    addIngredientButton?.addEventListener("click", () => {
+      addIngredientRow({}, editIngredientContainer);
+    });
+  }
+
   const actions = card.querySelector(".card-actions");
   if (actions && !actions.querySelector('[data-action="save"]')) {
     actions.insertAdjacentHTML(
@@ -567,16 +517,24 @@ async function saveRecipe(card) {
   const title = card.querySelector(".edit-title")?.value.trim();
   const description = card.querySelector(".edit-desc")?.value.trim();
   const prepValue = card.querySelector(".edit-prep")?.value;
+  const editIngredientContainer = card.querySelector(".edit-ingredient-rows");
 
   if (!title) {
     alert("Title is required.");
     return;
   }
 
+  const ingredientPayload = collectIngredientRows(editIngredientContainer);
+  if (!ingredientPayload.ok) {
+    alert(ingredientPayload.message);
+    return;
+  }
+
   const payload = {
     title,
     description,
-    prep_time: prepValue === "" ? null : Number(prepValue)
+    prep_time: prepValue === "" ? null : Number(prepValue),
+    ingredientRows: ingredientPayload.rows
   };
 
   try {
@@ -638,8 +596,16 @@ function renderDietOptions(diets) {
   });
 }
 
-function addIngredientRow(initial = {}) {
-  const container = document.getElementById("ingredientRows");
+function resolveIngredientRowsContainer(containerOrSelector = "#ingredientRows") {
+  if (typeof containerOrSelector === "string") {
+    return document.querySelector(containerOrSelector);
+  }
+
+  return containerOrSelector || null;
+}
+
+function addIngredientRow(initial = {}, containerOrSelector = "#ingredientRows") {
+  const container = resolveIngredientRowsContainer(containerOrSelector);
   if (!container) return;
 
   ingredientRowCounter += 1;
@@ -849,8 +815,9 @@ function clearIngredientRow(row) {
   delete row.dataset.caloriesPer100g;
 }
 
-function collectIngredientRows() {
-  const rows = document.querySelectorAll("#ingredientRows .ingredient-row");
+function collectIngredientRows(containerOrSelector = "#ingredientRows") {
+  const container = resolveIngredientRowsContainer(containerOrSelector);
+  const rows = container ? container.querySelectorAll(".ingredient-row") : [];
   const payload = [];
 
   for (const [index, row] of Array.from(rows).entries()) {
