@@ -1,0 +1,109 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  font-family: "Inter", sans-serif;
+  color: #fff7e7;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(243, 184, 62, 0.24), transparent 24%),
+    radial-gradient(circle at 80% 30%, rgba(224, 138, 36, 0.2), transparent 28%),
+    linear-gradient(160deg, #110f0d 0%, #2a160d 58%, #4b230d 100%);
+  overflow: hidden;
+}
+
+.transition-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  position: relative;
+  isolation: isolate;
+}
+
+.transition-orb {
+  position: absolute;
+  width: 22rem;
+  height: 22rem;
+  border-radius: 999px;
+  filter: blur(65px);
+  opacity: 0.6;
+  z-index: -1;
+}
+
+.transition-orb-left {
+  top: -4rem;
+  left: -2rem;
+  background: rgba(243, 184, 62, 0.26);
+}
+
+.transition-orb-right {
+  right: -4rem;
+  bottom: -2rem;
+  background: rgba(145, 56, 12, 0.38);
+}
+
+.transition-card {
+  width: min(100%, 30rem);
+  padding: 2.5rem 2rem;
+  text-align: center;
+  border-radius: 1.75rem;
+  background: rgba(255, 250, 240, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.26);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.transition-brand {
+  margin-bottom: 0.85rem;
+  color: #f3b83e;
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.transition-card h1 {
+  font-family: "DM Serif Display", serif;
+  font-size: clamp(2rem, 5vw, 2.9rem);
+  font-weight: 400;
+  line-height: 1.04;
+}
+
+.transition-copy {
+  margin-top: 0.95rem;
+  color: rgba(255, 247, 231, 0.84);
+  line-height: 1.6;
+}
+
+.transition-loader {
+  margin-top: 1.6rem;
+  width: 100%;
+  height: 0.65rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.transition-loader span {
+  display: block;
+  width: 42%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(243, 184, 62, 0.95), rgba(255, 242, 197, 0.96));
+  animation: transition-slide 1s ease-in-out infinite;
+}
+
+@keyframes transition-slide {
+  0% {
+    transform: translateX(-145%);
+  }
+
+  100% {
+    transform: translateX(330%);
+  }
+}
