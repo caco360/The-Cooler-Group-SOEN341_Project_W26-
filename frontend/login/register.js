@@ -38,12 +38,12 @@ form.addEventListener("submit", async (e) => {
     });
 
     const data = await res.json();
-
+    // Handles errors
     if (!data.ok) {
       errorBox.textContent = data.message;
       return;
     }
-
+    // Post to login
     const loginRes = await fetch("/login", {
       method: "POST",
       headers: {
@@ -56,7 +56,7 @@ form.addEventListener("submit", async (e) => {
     });
 
     const loginData = await loginRes.json();
-
+    // Handles case where auto-login failed
     if (!loginData.ok || !loginData.redirectTo) {
       errorBox.textContent = loginData.message || "Account created, but auto-login failed.";
       return;
