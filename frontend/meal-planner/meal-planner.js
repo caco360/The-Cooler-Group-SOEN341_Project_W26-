@@ -14,7 +14,7 @@ let currentWeekStart = "";
 let userRecipes = [];
 let plannerMeals = [];
 let calorieGoal = null;
-
+// Gets Meal calories given the meal
 function getMealCalories(meal) {
   return (
     toFiniteNumber(meal?.recipes?.total_calories) ??
@@ -32,7 +32,7 @@ function init() {
   loadCalorieGoal();
   loadPlannerMeals();
 }
-
+// Sets up current week
 function setupCurrentWeek() {
   const today = new Date();
   const monday = getMonday(today);
@@ -44,6 +44,7 @@ function parseLocalDate(dateStr) {
   const [y, m, d] = dateStr.split("-").map(Number);
   return new Date(y, m - 1, d);
 }
+// Adds the event listeners to the week buttons
 function bindWeekButtons() {
   const prevBtn = document.getElementById("prevWeekBtn");
   const nextBtn = document.getElementById("nextWeekBtn");
@@ -68,7 +69,7 @@ function bindWeekButtons() {
     });
   }
 }
-
+// Add event listeners to slots
 function bindSlots() {
   const slots = document.querySelectorAll(".meal-slot");
 
@@ -83,7 +84,7 @@ function bindSlots() {
     });
   });
 }
-
+// Adds event listenrs to modal
 function bindModal() {
   const closeBtn = document.getElementById("closeModalBtn");
   const modal = document.getElementById("mealModal");
@@ -110,7 +111,7 @@ if (removeBtn) {
     form.addEventListener("submit", saveMealToPlanner);
   }
 }
-
+// Handles opening the meal modal
 function openMealModal(day, mealType) {
   const modal = document.getElementById("mealModal");
   const modalMealType = document.getElementById("mealTypeSelect");
@@ -125,7 +126,7 @@ function openMealModal(day, mealType) {
 
   modal.classList.remove("hidden");
 }
-
+// Closes the meal modal
 function closeMealModal() {
   const modal = document.getElementById("mealModal");
   if (modal) modal.classList.add("hidden");
@@ -196,7 +197,7 @@ function renderRecipeOptions(recipes) {
     select.appendChild(option);
   });
 }
-
+// Sends POST requests to save the meal to the planner
 async function saveMealToPlanner(e) {
   e.preventDefault();
 
@@ -238,7 +239,7 @@ async function saveMealToPlanner(e) {
     alert("Server error.");
   }
 }
-
+// Updates the week label
 function updateWeekLabel(dateObj) {
   const label = document.getElementById("weekLabel");
   if (!label) return;
@@ -251,7 +252,7 @@ function updateWeekLabel(dateObj) {
 
   label.textContent = `Week of ${formatted}`;
 }
-
+// Gets the moday of the current week
 function getMonday(date) {
   const d = new Date(date);
   const day = d.getDay();
