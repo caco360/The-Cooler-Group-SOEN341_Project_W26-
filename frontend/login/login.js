@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // Success → redirect (same as first version)
+      // Success then redirect
       if (data.redirectTo) {
         const next = encodeURIComponent(data.redirectTo);
         const message = encodeURIComponent("Signing you in and opening your profile.");
