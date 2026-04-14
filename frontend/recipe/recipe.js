@@ -207,6 +207,41 @@ function formatCalories(value) {
   return `${num.toFixed(0)} kcal`;
 }
 
+function renderRecipesEmptyState({ title, copy, actionLabel = "", action = "" }) {
+  const statusEl = document.getElementById("status");
+  const grid = document.getElementById("recipesGrid");
+
+  if (statusEl) statusEl.textContent = "";
+  if (!grid) return;
+
+  grid.innerHTML = `
+    <article class="empty-state-card">
+      <div class="empty-state-illustration" aria-hidden="true"></div>
+      <h3 class="empty-state-title">${escapeHtml(title)}</h3>
+      <p class="empty-state-copy">${escapeHtml(copy)}</p>
+      ${actionLabel ? `<button class="btn-secondary empty-state-action" type="button" data-empty-action="${escapeHtml(action)}">${escapeHtml(actionLabel)}</button>` : ""}
+    </article>
+  `;
+
+  const actionBtn = grid.querySelector("[data-empty-action]");
+  if (!actionBtn) return;
+
+  actionBtn.addEventListener("click", () => {
+    const actionName = actionBtn.dataset.emptyAction;
+
+    if (actionName === "open-form") {
+      setRecipeFormOpen(true);
+      return;
+    }
+
+    if (actionName === "clear-search") {
+      const searchEl = document.getElementById("recipeSearch");
+      if (searchEl) searchEl.value = "";
+      renderRecipes(window._recipes || [], "", null, null);
+    }
+  });
+}
+
 async function loadRecipes() {
   const statusEl = document.getElementById("status");
   const grid = document.getElementById("recipesGrid");
@@ -245,8 +280,12 @@ async function loadRecipes() {
     window._recipes = recipes;
 
     if (!recipes.length) {
-      if (statusEl) statusEl.textContent = "No recipes saved yet.";
-      if (grid) grid.innerHTML = "";
+      renderRecipesEmptyState({
+        title: "Your recipe box is still empty",
+        copy: "Start with one simple meal you actually make often, then build your collection from there.",
+        actionLabel: "Add Your First Recipe",
+        action: "open-form"
+      });
       return;
     }
 
@@ -316,10 +355,21 @@ function renderRecipes(
   });
 
   if (!filtered.length) {
-    if (statusEl) {
-      statusEl.textContent = recipes.length ? "No recipes match your search." : "No recipes saved yet.";
-    }
-    if (grid) grid.innerHTML = "";
+    renderRecipesEmptyState(
+      recipes.length
+        ? {
+            title: "No recipes match this filter",
+            copy: "Try loosening the search or filter settings to bring more meals back into view.",
+            actionLabel: "Clear Search",
+            action: "clear-search"
+          }
+        : {
+            title: "Your recipe box is still empty",
+            copy: "Start with one simple meal you actually make often, then build your collection from there.",
+            actionLabel: "Add Your First Recipe",
+            action: "open-form"
+          }
+    );
     return;
   }
 

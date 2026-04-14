@@ -307,6 +307,51 @@ section h2 {
   gap: 16px;
 }
 
+.empty-state-card {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.9rem;
+  min-height: 18rem;
+  padding: 2.5rem 1.5rem;
+  border-radius: 18px;
+  border: 1px dashed rgba(145, 56, 12, 0.22);
+  background:
+    radial-gradient(circle at top, rgba(243, 184, 62, 0.18), transparent 34%),
+    linear-gradient(180deg, #fffdf9 0%, #faf4eb 100%);
+}
+
+.empty-state-illustration {
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 1.4rem;
+  background:
+    radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.85), transparent 28%),
+    linear-gradient(135deg, #f3c14d, #d88721);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 18px 34px rgba(216, 135, 33, 0.22);
+}
+
+.empty-state-title {
+  color: #1c1c1c;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.empty-state-copy {
+  max-width: 32rem;
+  color: #66584d;
+  line-height: 1.65;
+}
+
+.empty-state-action {
+  margin-top: 0.35rem;
+}
+
 .recipe-card {
   background: #fafafa;
   border: 1px solid #eee;
