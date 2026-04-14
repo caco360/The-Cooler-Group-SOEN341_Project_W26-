@@ -214,6 +214,17 @@ section h2 {
   border-radius: 12px;
   padding: 18px;
   box-shadow: 0 14px 36px rgba(0,0,0,0.18);
+  border: 1px solid rgba(243, 184, 62, 0.14);
+  transition: box-shadow 0.22s ease, border-color 0.22s ease, transform 0.22s ease;
+}
+
+.modal-dialog:hover {
+  transform: translateY(-2px);
+  border-color: rgba(243, 184, 62, 0.5);
+  box-shadow:
+    0 18px 40px rgba(0,0,0,0.18),
+    0 0 0 1px rgba(243, 184, 62, 0.24),
+    0 0 28px rgba(243, 184, 62, 0.38);
 }
 
 .modal-dialog h3 {
