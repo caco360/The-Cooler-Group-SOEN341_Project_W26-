@@ -9,7 +9,7 @@ const transitionCopy = document.getElementById("transitionCopy");
 if (transitionTitle && title) {
   transitionTitle.textContent = title;
 }
-
+// reducing latency by preloading the next page
 if (transitionCopy && copy) {
   transitionCopy.textContent = copy;
 }
