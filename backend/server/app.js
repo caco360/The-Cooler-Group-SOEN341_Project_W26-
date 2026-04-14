@@ -241,6 +241,7 @@ function normalizeGoal(value) {
   return legacyGoalMap[normalized] || null;
 }
 
+// Normalizes an activity level value to a supported key, returning null for invalid input.
 function normalizeActivityLevel(value) {
   const normalized = String(value || "").trim();
 
@@ -251,6 +252,7 @@ function normalizeActivityLevel(value) {
   return null;
 }
 
+// Calculates BMI and calorie goal from validated biometric inputs, returning null for values that cannot be computed.
 function calculateBiometricsMetrics({ age, sex, weight, height, activityLevel, goal }) {
   let bmi = null;
   let calorieGoal = null;
@@ -282,13 +284,14 @@ function calculateBiometricsMetrics({ age, sex, weight, height, activityLevel, g
   return { bmi, calorieGoal };
 }
 
+// Normalizes USDA search text by lowercasing it, removing non-alphanumeric characters, and collapsing separators into spaces.
 function normalizeUsdaSearchText(value) {
   return String(value || "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 }
-
+// Splits a USDA search query into unique normalized tokens, keeping only tokens with at least two characters.
 function tokenizeUsdaSearch(query) {
   return [...new Set(
     normalizeUsdaSearchText(query)
@@ -296,7 +299,7 @@ function tokenizeUsdaSearch(query) {
       .filter(token => token.length >= 2)
   )];
 }
-
+// Scores how well a USDA food description matches a search query by rewarding exact, partial, and token-ordered matches.
 function scoreUsdaFoodMatch(description, rawQuery, tokens) {
   const normalizedDescription = normalizeUsdaSearchText(description);
   const normalizedQuery = normalizeUsdaSearchText(rawQuery);
@@ -387,6 +390,7 @@ async function getUsdaFoodLookupByIds(fdcIds) {
   };
 }
 
+// Normalizes structured ingredient rows by converting values to finite numbers and trimming strings.
 function normalizeStructuredIngredientRows(rawRows) {
   return rawRows.map((row, index) => {
     const usdaFoodId = toFiniteNumber(row?.usda_food_id);
@@ -413,6 +417,7 @@ function normalizeStructuredIngredientRows(rawRows) {
   });
 }
 
+// Builds structured recipe ingredient data by validating and enriching raw input rows with USDA food information, calculating calories, and returning structured rows along with total calories and ingredient names.
 async function buildStructuredRecipeIngredients(rawRows) {
   const normalizedRows = normalizeStructuredIngredientRows(rawRows);
   const { foodMap, calorieMap } = await getUsdaFoodLookupByIds(
@@ -550,6 +555,7 @@ app.get("/my-recipes", async (req, res) => {
   });
 });
 
+// Search USDA Foods
 app.get("/api/usda-foods/search", async (req, res) => {
   const query = String(req.query.q || "").trim();
   const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 20);
