@@ -103,7 +103,7 @@ describe("Meal Planner duplicate behavior", () => {
   });
 
   // -----------------------------------------
-  // ❌ TEST 2: SAME RECIPE SAME DAY → REJECT
+  // TEST 2: SAME RECIPE SAME DAY → REJECT
   // -----------------------------------------
   test("should reject duplicate recipe in same day", async () => {
 
