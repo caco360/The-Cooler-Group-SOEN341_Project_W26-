@@ -159,11 +159,13 @@
 
     <div style="height:8px"></div>
 
-    <label>Cost range</label>
-    <div class="cost-row">
-      <input id="filterCostMin" type="number" step="0.01" placeholder="Min" />
-      <span class="cost-sep">—</span>
-      <input id="filterCostMax" type="number" step="0.01" placeholder="Max" />
+    <label for="filterCostRange">Cost</label>
+    <div class="slider-filter">
+      <input id="filterCostRange" class="range-slider" type="range" min="0" max="101" step="1" value="101" />
+      <div class="slider-scale" aria-hidden="true">
+        <span>$0</span>
+        <span id="filterCostValue">$100+</span>
+      </div>
     </div>
     <label>Calories</label>
 <div class="cost-row">

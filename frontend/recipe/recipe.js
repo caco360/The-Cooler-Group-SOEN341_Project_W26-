@@ -68,12 +68,32 @@ function init() {
   const filterBtn = document.getElementById("filterBtn");
   const modal = document.getElementById("filterModal");
   const nameField = document.getElementById("filterName");
-  const costMinField = document.getElementById("filterCostMin");
-  const costMaxField = document.getElementById("filterCostMax");
+  const costRangeField = document.getElementById("filterCostRange");
+  const costValueLabel = document.getElementById("filterCostValue");
   const timeMinField = document.getElementById("filterTimeMin");
   const timeMaxField = document.getElementById("filterTimeMax");
   const applyBtn = document.getElementById("applyFilterBtn");
   const cancelBtn = document.getElementById("cancelFilterBtn");
+
+  function formatCostSliderValue(value) {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue) || numericValue >= 101) {
+      return "$100+";
+    }
+
+    return `$${numericValue}`;
+  }
+
+  function syncCostSliderLabel() {
+    if (costValueLabel && costRangeField) {
+      costValueLabel.textContent = formatCostSliderValue(costRangeField.value);
+    }
+  }
+
+  if (costRangeField) {
+    costRangeField.addEventListener("input", syncCostSliderLabel);
+    syncCostSliderLabel();
+  }
 
   function closeModal() {
     if (!modal) return;
@@ -85,10 +105,10 @@ function init() {
     filterBtn.addEventListener("click", () => {
       const searchEl = document.getElementById("recipeSearch");
       if (nameField) nameField.value = (searchEl?.value || "").trim();
-      if (costMinField) costMinField.value = "";
-      if (costMaxField) costMaxField.value = "";
+      if (costRangeField) costRangeField.value = "101";
       if (timeMinField) timeMinField.value = "";
       if (timeMaxField) timeMaxField.value = "";
+      syncCostSliderLabel();
       modal.classList.add("open");
       if (nameField) nameField.focus();
     });
@@ -97,8 +117,8 @@ function init() {
   if (applyBtn) {
     applyBtn.addEventListener("click", () => {
       const nameQ = (nameField?.value || "").trim();
-      const min = costMinField?.value === "" ? null : costMinField?.value;
-      const max = costMaxField?.value === "" ? null : costMaxField?.value;
+      const max = costRangeField ? Number(costRangeField.value) : null;
+      const normalizedMax = max !== null && max >= 101 ? null : max;
       const tMin = timeMinField?.value === "" ? null : timeMinField?.value;
       const tMax = timeMaxField?.value === "" ? null : timeMaxField?.value;
 
@@ -106,7 +126,7 @@ function init() {
       if (mainSearch) mainSearch.value = nameQ;
 
       closeModal();
-      renderRecipes(window._recipes || [], nameQ, min, max, false, tMin, tMax);
+      renderRecipes(window._recipes || [], nameQ, null, normalizedMax, false, tMin, tMax);
       filterBtn?.focus();
     });
   }
@@ -115,10 +135,10 @@ function init() {
     cancelBtn.addEventListener("click", () => {
       closeModal();
       if (nameField) nameField.value = "";
-      if (costMinField) costMinField.value = "";
-      if (costMaxField) costMaxField.value = "";
+      if (costRangeField) costRangeField.value = "101";
       if (timeMinField) timeMinField.value = "";
       if (timeMaxField) timeMaxField.value = "";
+      syncCostSliderLabel();
 
       const mainSearch = document.getElementById("recipeSearch");
       if (mainSearch) mainSearch.value = "";

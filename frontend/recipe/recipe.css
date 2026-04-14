@@ -246,6 +246,26 @@ section h2 {
 .cost-row input { flex: 1; }
 .cost-sep { color: #777; }
 
+.slider-filter {
+  margin-bottom: 12px;
+}
+
+.range-slider {
+  width: 100%;
+  accent-color: #91380c;
+  cursor: pointer;
+}
+
+.slider-scale {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  color: #777;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .modal-actions {
   display: flex;
   gap: 10px;
