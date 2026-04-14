@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("loginForm");
   const errorBox = document.getElementById("loginError");
+  const loadingPath = "/loading/loading.html";
 
   if (!form || !errorBox) return;
 
@@ -43,7 +44,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Success → redirect (same as first version)
       if (data.redirectTo) {
-        window.location.href = data.redirectTo;
+        const next = encodeURIComponent(data.redirectTo);
+        const message = encodeURIComponent("Signing you in and opening your profile.");
+        window.location.href = `${loadingPath}?next=${next}&message=${message}`;
       } else {
         errorBox.textContent = "Login succeeded but no redirect provided.";
       }

@@ -68,12 +68,52 @@ function init() {
   const filterBtn = document.getElementById("filterBtn");
   const modal = document.getElementById("filterModal");
   const nameField = document.getElementById("filterName");
-  const costMinField = document.getElementById("filterCostMin");
-  const costMaxField = document.getElementById("filterCostMax");
-  const timeMinField = document.getElementById("filterTimeMin");
-  const timeMaxField = document.getElementById("filterTimeMax");
+  const costRangeField = document.getElementById("filterCostRange");
+  const costValueLabel = document.getElementById("filterCostValue");
+  const timeRangeField = document.getElementById("filterTimeRange");
+  const timeValueLabel = document.getElementById("filterTimeValue");
   const applyBtn = document.getElementById("applyFilterBtn");
   const cancelBtn = document.getElementById("cancelFilterBtn");
+
+  function formatCostSliderValue(value) {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue) || numericValue >= 101) {
+      return "$100+";
+    }
+
+    return `$${numericValue}`;
+  }
+
+  function syncCostSliderLabel() {
+    if (costValueLabel && costRangeField) {
+      costValueLabel.textContent = formatCostSliderValue(costRangeField.value);
+    }
+  }
+
+  function formatTimeSliderValue(value) {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue) || numericValue >= 121) {
+      return "120+ min";
+    }
+
+    return `${numericValue} min`;
+  }
+
+  function syncTimeSliderLabel() {
+    if (timeValueLabel && timeRangeField) {
+      timeValueLabel.textContent = formatTimeSliderValue(timeRangeField.value);
+    }
+  }
+
+  if (costRangeField) {
+    costRangeField.addEventListener("input", syncCostSliderLabel);
+    syncCostSliderLabel();
+  }
+
+  if (timeRangeField) {
+    timeRangeField.addEventListener("input", syncTimeSliderLabel);
+    syncTimeSliderLabel();
+  }
 
   function closeModal() {
     if (!modal) return;
@@ -85,10 +125,10 @@ function init() {
     filterBtn.addEventListener("click", () => {
       const searchEl = document.getElementById("recipeSearch");
       if (nameField) nameField.value = (searchEl?.value || "").trim();
-      if (costMinField) costMinField.value = "";
-      if (costMaxField) costMaxField.value = "";
-      if (timeMinField) timeMinField.value = "";
-      if (timeMaxField) timeMaxField.value = "";
+      if (costRangeField) costRangeField.value = "101";
+      if (timeRangeField) timeRangeField.value = "121";
+      syncCostSliderLabel();
+      syncTimeSliderLabel();
       modal.classList.add("open");
       if (nameField) nameField.focus();
     });
@@ -97,16 +137,16 @@ function init() {
   if (applyBtn) {
     applyBtn.addEventListener("click", () => {
       const nameQ = (nameField?.value || "").trim();
-      const min = costMinField?.value === "" ? null : costMinField?.value;
-      const max = costMaxField?.value === "" ? null : costMaxField?.value;
-      const tMin = timeMinField?.value === "" ? null : timeMinField?.value;
-      const tMax = timeMaxField?.value === "" ? null : timeMaxField?.value;
+      const max = costRangeField ? Number(costRangeField.value) : null;
+      const normalizedMax = max !== null && max >= 101 ? null : max;
+      const timeMax = timeRangeField ? Number(timeRangeField.value) : null;
+      const normalizedTimeMax = timeMax !== null && timeMax >= 121 ? null : timeMax;
 
       const mainSearch = document.getElementById("recipeSearch");
       if (mainSearch) mainSearch.value = nameQ;
 
       closeModal();
-      renderRecipes(window._recipes || [], nameQ, min, max, false, tMin, tMax);
+      renderRecipes(window._recipes || [], nameQ, null, normalizedMax, false, null, normalizedTimeMax);
       filterBtn?.focus();
     });
   }
@@ -115,10 +155,10 @@ function init() {
     cancelBtn.addEventListener("click", () => {
       closeModal();
       if (nameField) nameField.value = "";
-      if (costMinField) costMinField.value = "";
-      if (costMaxField) costMaxField.value = "";
-      if (timeMinField) timeMinField.value = "";
-      if (timeMaxField) timeMaxField.value = "";
+      if (costRangeField) costRangeField.value = "101";
+      if (timeRangeField) timeRangeField.value = "121";
+      syncCostSliderLabel();
+      syncTimeSliderLabel();
 
       const mainSearch = document.getElementById("recipeSearch");
       if (mainSearch) mainSearch.value = "";
@@ -167,6 +207,41 @@ function formatCalories(value) {
   return `${num.toFixed(0)} kcal`;
 }
 
+function renderRecipesEmptyState({ title, copy, actionLabel = "", action = "" }) {
+  const statusEl = document.getElementById("status");
+  const grid = document.getElementById("recipesGrid");
+
+  if (statusEl) statusEl.textContent = "";
+  if (!grid) return;
+
+  grid.innerHTML = `
+    <article class="empty-state-card">
+      <div class="empty-state-illustration" aria-hidden="true"></div>
+      <h3 class="empty-state-title">${escapeHtml(title)}</h3>
+      <p class="empty-state-copy">${escapeHtml(copy)}</p>
+      ${actionLabel ? `<button class="btn-secondary empty-state-action" type="button" data-empty-action="${escapeHtml(action)}">${escapeHtml(actionLabel)}</button>` : ""}
+    </article>
+  `;
+
+  const actionBtn = grid.querySelector("[data-empty-action]");
+  if (!actionBtn) return;
+
+  actionBtn.addEventListener("click", () => {
+    const actionName = actionBtn.dataset.emptyAction;
+
+    if (actionName === "open-form") {
+      setRecipeFormOpen(true);
+      return;
+    }
+
+    if (actionName === "clear-search") {
+      const searchEl = document.getElementById("recipeSearch");
+      if (searchEl) searchEl.value = "";
+      renderRecipes(window._recipes || [], "", null, null);
+    }
+  });
+}
+
 async function loadRecipes() {
   const statusEl = document.getElementById("status");
   const grid = document.getElementById("recipesGrid");
@@ -205,8 +280,12 @@ async function loadRecipes() {
     window._recipes = recipes;
 
     if (!recipes.length) {
-      if (statusEl) statusEl.textContent = "No recipes saved yet.";
-      if (grid) grid.innerHTML = "";
+      renderRecipesEmptyState({
+        title: "Your recipe box is still empty",
+        copy: "Start with one simple meal you actually make often, then build your collection from there.",
+        actionLabel: "Add Your First Recipe",
+        action: "open-form"
+      });
       return;
     }
 
@@ -276,10 +355,21 @@ function renderRecipes(
   });
 
   if (!filtered.length) {
-    if (statusEl) {
-      statusEl.textContent = recipes.length ? "No recipes match your search." : "No recipes saved yet.";
-    }
-    if (grid) grid.innerHTML = "";
+    renderRecipesEmptyState(
+      recipes.length
+        ? {
+            title: "No recipes match this filter",
+            copy: "Try loosening the search or filter settings to bring more meals back into view.",
+            actionLabel: "Clear Search",
+            action: "clear-search"
+          }
+        : {
+            title: "Your recipe box is still empty",
+            copy: "Start with one simple meal you actually make often, then build your collection from there.",
+            actionLabel: "Add Your First Recipe",
+            action: "open-form"
+          }
+    );
     return;
   }
 
