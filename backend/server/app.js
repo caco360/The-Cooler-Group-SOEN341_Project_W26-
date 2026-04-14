@@ -166,17 +166,22 @@ app.post("/register", async (req, res) => {
   });
 
 });
-
+// Returns information about the currently logged-in user.
+// If no valid session exists, respond with 401 Unauthorized.
 app.get("/me", (req, res) => {
+  // Check whether the user is authenticated through the session.
   if (!req.session.userId) {
     return res.status(401).json({ ok: false, message: "Not logged in" });
   }
+
+  // Send back basic session-backed user info.
   return res.json({
     ok: true,
     user: { id: req.session.userId, username: req.session.username }
   });
 });
 
+// Converts a value to a finite number, returning null for empty or invalid input.
 function toFiniteNumber(value) {
   if (value === null || value === undefined || value === "") {
     return null;
@@ -186,16 +191,18 @@ function toFiniteNumber(value) {
   return Number.isFinite(num) ? num : null;
 }
 
+// Converts a value to a positive number, returning null for empty, invalid, or non-positive input.
 function toPositiveNumber(value) {
   const num = toFiniteNumber(value);
   return num !== null && num > 0 ? num : null;
 }
 
+// Converts a value to a positive integer, returning null for empty, invalid, or non-positive input.
 function toPositiveInteger(value) {
   const num = toPositiveNumber(value);
   return num !== null ? Math.trunc(num) : null;
 }
-
+// Normalizes a sex value to "male" or "female", returning null for any other input.
 function normalizeSex(value) {
   const normalized = String(value || "").trim().toLowerCase();
 
@@ -206,6 +213,7 @@ function normalizeSex(value) {
   return null;
 }
 
+// Normalizes a goal value to a supported goal key, including legacy aliases, and returns null for invalid input.
 function normalizeGoal(value) {
   const normalized = String(value || "").trim();
 
