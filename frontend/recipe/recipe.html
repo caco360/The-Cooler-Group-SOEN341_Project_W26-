@@ -176,12 +176,13 @@
 
     <div style="height:10px"></div>
 
-    <!-- prep time filter -->
-    <label>Prep time (minutes)</label>
-    <div class="cost-row">
-      <input id="filterTimeMin" type="number" placeholder="Min" />
-      <span class="cost-sep">—</span>
-      <input id="filterTimeMax" type="number" placeholder="Max" />
+    <label for="filterTimeRange">Prep time (minutes)</label>
+    <div class="slider-filter">
+      <input id="filterTimeRange" class="range-slider" type="range" min="0" max="121" step="1" value="121" />
+      <div class="slider-scale" aria-hidden="true">
+        <span>0 min</span>
+        <span id="filterTimeValue">120+ min</span>
+      </div>
     </div>
 
     <div class="modal-actions">
