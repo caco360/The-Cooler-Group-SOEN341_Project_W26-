@@ -1,9 +1,17 @@
-﻿document.addEventListener("DOMContentLoaded", init);
+﻿// Run page initialization once the DOM is fully loaded.
+document.addEventListener("DOMContentLoaded", init);
 
+// USDA ingredient search configuration.
 const USDA_SEARCH_MIN_LENGTH = 0;
 const USDA_SEARCH_LIMIT = 1000;
+
+// Counter used to assign a unique id to each ingredient row.
 let ingredientRowCounter = 0;
 
+/**
+ * Opens or closes the recipe creation panel.
+ * Also updates button text, aria state, and focuses the title input when opened.
+ */
 function setRecipeFormOpen(isOpen) {
   const toggleBtn = document.getElementById("toggleRecipeFormBtn");
   const panel = document.getElementById("recipeFormPanel");
@@ -21,6 +29,11 @@ function setRecipeFormOpen(isOpen) {
   }
 }
 
+/**
+ * Main page setup.
+ * Binds UI events, loads recipes, adds the first ingredient row,
+ * and loads diet preference options.
+ */
 function init() {
   const refreshBtn = document.getElementById("refreshBtn");
   if (refreshBtn) refreshBtn.addEventListener("click", loadRecipes);
@@ -43,6 +56,9 @@ function init() {
 
   const searchEl = document.getElementById("recipeSearch");
   if (searchEl) {
+    /**
+     * Small local debounce helper to avoid re-rendering on every keystroke instantly.
+     */
     const debounce = (fn, wait = 200) => {
       let timer;
       return (...args) => {
@@ -51,6 +67,7 @@ function init() {
       };
     };
 
+    // Live search through the already-loaded recipe list.
     const onSearch = debounce(() => {
       const q = (searchEl.value || "").trim();
       renderRecipes(window._recipes || [], q);
@@ -65,6 +82,7 @@ function init() {
     });
   }
 
+  // Filter modal elements.
   const filterBtn = document.getElementById("filterBtn");
   const modal = document.getElementById("filterModal");
   const nameField = document.getElementById("filterName");
@@ -75,12 +93,70 @@ function init() {
   const applyBtn = document.getElementById("applyFilterBtn");
   const cancelBtn = document.getElementById("cancelFilterBtn");
 
+  /**
+   * Formats the displayed cost slider value.
+   * Values at or above 101 are treated as "100+".
+   */
+  function formatCostSliderValue(value) {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue) || numericValue >= 101) {
+      return "$100+";
+    }
+
+    return `$${numericValue}`;
+  }
+
+  /**
+   * Keeps the visible cost label in sync with the slider position.
+   */
+  function syncCostSliderLabel() {
+    if (costValueLabel && costRangeField) {
+      costValueLabel.textContent = formatCostSliderValue(costRangeField.value);
+    }
+  }
+
+  /**
+   * Formats the displayed prep time slider value.
+   * Values at or above 121 are treated as "120+ min".
+   */
+  function formatTimeSliderValue(value) {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue) || numericValue >= 121) {
+      return "120+ min";
+    }
+
+    return `${numericValue} min`;
+  }
+
+  /**
+   * Keeps the visible time label in sync with the slider position.
+   */
+  function syncTimeSliderLabel() {
+    if (timeValueLabel && timeRangeField) {
+      timeValueLabel.textContent = formatTimeSliderValue(timeRangeField.value);
+    }
+  }
+
+  if (costRangeField) {
+    costRangeField.addEventListener("input", syncCostSliderLabel);
+    syncCostSliderLabel();
+  }
+
+  if (timeRangeField) {
+    timeRangeField.addEventListener("input", syncTimeSliderLabel);
+    syncTimeSliderLabel();
+  }
+
+  /**
+   * Closes the filter modal and updates accessibility state.
+   */
   function closeModal() {
     if (!modal) return;
     modal.classList.remove("open");
     modal.setAttribute("aria-hidden", "true");
   }
 
+  // Open the filter modal and preload it from the current search box.
   if (filterBtn && modal) {
     filterBtn.addEventListener("click", () => {
       const searchEl = document.getElementById("recipeSearch");
@@ -94,6 +170,7 @@ function init() {
     });
   }
 
+  // Apply modal filters to the rendered recipe list.
   if (applyBtn) {
     applyBtn.addEventListener("click", () => {
       const nameQ = (nameField?.value || "").trim();
@@ -111,6 +188,7 @@ function init() {
     });
   }
 
+  // Reset modal and clear active search/filter state.
   if (cancelBtn) {
     cancelBtn.addEventListener("click", () => {
       closeModal();
@@ -128,16 +206,19 @@ function init() {
     });
   }
 
+  // Close modal when user clicks the darkened backdrop.
   if (modal) {
     modal.addEventListener("click", (e) => {
       if (e.target === modal) closeModal();
     });
   }
 
+  // Allow Escape to close the filter modal.
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeModal();
   });
 
+  // Close all ingredient result dropdowns when clicking outside an ingredient row.
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".ingredient-row")) {
       document.querySelectorAll(".ingredient-results.open").forEach((results) => {
@@ -147,11 +228,15 @@ function init() {
     }
   });
 
+  // Start with one ingredient row, then fetch all required page data.
   addIngredientRow();
   loadRecipes();
   loadDietPreferences().then(renderDietOptions);
 }
 
+/**
+ * Escapes user-controlled text before inserting it into HTML.
+ */
 function escapeHtml(str) {
   return String(str ?? "")
     .replaceAll("&", "&amp;")
@@ -161,12 +246,58 @@ function escapeHtml(str) {
     .replaceAll("'", "&#039;");
 }
 
+/**
+ * Formats a numeric calorie value for display.
+ */
 function formatCalories(value) {
   const num = Number(value);
   if (!Number.isFinite(num)) return "-";
   return `${num.toFixed(0)} kcal`;
 }
 
+/**
+ * Renders a reusable empty state card into the recipe grid.
+ * Optional action button can open the form or clear the search.
+ */
+function renderRecipesEmptyState({ title, copy, actionLabel = "", action = "" }) {
+  const statusEl = document.getElementById("status");
+  const grid = document.getElementById("recipesGrid");
+
+  if (statusEl) statusEl.textContent = "";
+  if (!grid) return;
+
+  grid.innerHTML = `
+    <article class="empty-state-card">
+      <div class="empty-state-illustration" aria-hidden="true"></div>
+      <h3 class="empty-state-title">${escapeHtml(title)}</h3>
+      <p class="empty-state-copy">${escapeHtml(copy)}</p>
+      ${actionLabel ? `<button class="btn-secondary empty-state-action" type="button" data-empty-action="${escapeHtml(action)}">${escapeHtml(actionLabel)}</button>` : ""}
+    </article>
+  `;
+
+  const actionBtn = grid.querySelector("[data-empty-action]");
+  if (!actionBtn) return;
+
+  actionBtn.addEventListener("click", () => {
+    const actionName = actionBtn.dataset.emptyAction;
+
+    if (actionName === "open-form") {
+      setRecipeFormOpen(true);
+      return;
+    }
+
+    if (actionName === "clear-search") {
+      const searchEl = document.getElementById("recipeSearch");
+      if (searchEl) searchEl.value = "";
+      renderRecipes(window._recipes || [], "", null, null);
+    }
+  });
+}
+
+/**
+ * Loads the user's recipes from the backend.
+ * Handles unauthorized state, loading state, empty state, and error state.
+ */
 async function loadRecipes() {
   const statusEl = document.getElementById("status");
   const grid = document.getElementById("recipesGrid");
@@ -177,6 +308,7 @@ async function loadRecipes() {
   }
   if (grid) grid.innerHTML = "";
 
+  // Session check before loading recipes.
   const meRes = await fetch("/me");
   if (meRes.status === 401) {
     window.location.href = "/login/login.html";
@@ -221,6 +353,10 @@ async function loadRecipes() {
   }
 }
 
+/**
+ * Renders recipes into the grid after applying optional
+ * name, cost, and prep-time filters.
+ */
 function renderRecipes(
   recipes,
   query = "",
@@ -240,8 +376,10 @@ function renderRecipes(
   const maxN = costMax === null || costMax === "" ? null : Number(costMax);
 
   const filtered = recipes.filter((r) => {
+    // Title search match.
     const nameMatch = nameFilterActive ? (r.title || "").toLowerCase().includes(q) : false;
 
+    // Cost match.
     let costMatch = false;
     if (costFilterActive) {
       const val = r.cost ?? null;
@@ -255,6 +393,7 @@ function renderRecipes(
       }
     }
 
+    // Prep-time match.
     const timeFilterActive = (timeMin !== null && timeMin !== "") || (timeMax !== null && timeMax !== "");
     let timeMatch = true;
     if (timeFilterActive) {
@@ -269,6 +408,7 @@ function renderRecipes(
       }
     }
 
+    // Combine name and cost filters using either OR or AND behavior, then require time match.
     return (
       (useOr ? (nameFilterActive && nameMatch) || (costFilterActive && costMatch) : (!nameFilterActive || nameMatch) && (!costFilterActive || costMatch)) &&
       timeMatch
@@ -326,16 +466,22 @@ function renderRecipes(
       })
       .join("");
 
+    // Wire delete buttons after rendering.
     grid.querySelectorAll('button[data-action="delete"]').forEach((btn) => {
       btn.addEventListener("click", () => deleteRecipe(btn.dataset.id));
     });
 
+    // Wire edit buttons after rendering.
     grid.querySelectorAll('button[data-action="edit"]').forEach((btn) => {
       btn.addEventListener("click", () => startEdit(btn.dataset.id));
     });
   }
 }
 
+/**
+ * Collects form data and creates a new recipe in the backend.
+ * Also validates ingredient rows before submitting.
+ */
 async function addRecipe() {
   const msg = document.getElementById("createMsg");
   const title = document.getElementById("titleInput")?.value.trim();
@@ -406,6 +552,10 @@ async function addRecipe() {
   }
 }
 
+/**
+ * Deletes a recipe after user confirmation,
+ * then updates the local cached recipe list and re-renders.
+ */
 async function deleteRecipe(recipeId) {
   const ok = confirm("Delete this recipe?");
   if (!ok) return;
@@ -435,6 +585,9 @@ async function deleteRecipe(recipeId) {
   }
 }
 
+/**
+ * Replaces recipe card text fields with inline edit controls.
+ */
 function startEdit(recipeId) {
   const card = document.querySelector(`.recipe-card[data-id="${recipeId}"]`);
   const recipe = (window._recipes || []).find((r) => r.id == recipeId);
@@ -512,6 +665,9 @@ function startEdit(recipeId) {
   }
 }
 
+/**
+ * Saves inline recipe edits back to the backend.
+ */
 async function saveRecipe(card) {
   const id = card.dataset.id;
   const title = card.querySelector(".edit-title")?.value.trim();
@@ -565,6 +721,9 @@ async function saveRecipe(card) {
   }
 }
 
+/**
+ * Loads available diet preferences from profile data.
+ */
 async function loadDietPreferences() {
   try {
     const res = await fetch("/profile-data");
@@ -581,6 +740,9 @@ async function loadDietPreferences() {
   }
 }
 
+/**
+ * Fills the diet select dropdown with available diet options.
+ */
 function renderDietOptions(diets) {
   const select = document.getElementById("dietSelect");
 
@@ -596,16 +758,12 @@ function renderDietOptions(diets) {
   });
 }
 
-function resolveIngredientRowsContainer(containerOrSelector = "#ingredientRows") {
-  if (typeof containerOrSelector === "string") {
-    return document.querySelector(containerOrSelector);
-  }
-
-  return containerOrSelector || null;
-}
-
-function addIngredientRow(initial = {}, containerOrSelector = "#ingredientRows") {
-  const container = resolveIngredientRowsContainer(containerOrSelector);
+/**
+ * Adds a new ingredient row to the recipe form.
+ * Supports optional initial values for edit/hydration scenarios.
+ */
+function addIngredientRow(initial = {}) {
+  const container = document.getElementById("ingredientRows");
   if (!container) return;
 
   ingredientRowCounter += 1;
@@ -640,6 +798,10 @@ function addIngredientRow(initial = {}, containerOrSelector = "#ingredientRows")
   const amountInput = row.querySelector(".ingredient-amount");
   const removeBtn = row.querySelector(".ingredient-remove");
 
+  /**
+   * If the row was created with existing USDA food data,
+   * restore that selected state into the row dataset and UI.
+   */
   const hydrateSelection = () => {
     const fdcId = initial.usda_food_id ?? initial.fdc_id;
     const foodName = initial.foodName || initial.ingredient_name_snapshot || initial.description || "";
@@ -657,6 +819,9 @@ function addIngredientRow(initial = {}, containerOrSelector = "#ingredientRows")
 
   hydrateSelection();
 
+  /**
+   * Clears the selected USDA food metadata from the row.
+   */
   const clearSelection = () => {
     delete row.dataset.fdcId;
     delete row.dataset.foodName;
@@ -664,6 +829,9 @@ function addIngredientRow(initial = {}, containerOrSelector = "#ingredientRows")
     if (selected) selected.textContent = "";
   };
 
+  /**
+   * Closes and clears the ingredient search results dropdown.
+   */
   const closeResults = () => {
     if (results) {
       results.classList.remove("open");
@@ -672,6 +840,9 @@ function addIngredientRow(initial = {}, containerOrSelector = "#ingredientRows")
     }
   };
 
+  /**
+   * Renders USDA search results as selectable buttons.
+   */
   const renderResults = (foods) => {
     if (!results) return;
     results.innerHTML = "";
@@ -714,6 +885,10 @@ function addIngredientRow(initial = {}, containerOrSelector = "#ingredientRows")
     results.classList.add("open");
   };
 
+  /**
+   * Queries the backend USDA search endpoint for matching foods.
+   * Uses a token to prevent stale async responses from overwriting newer ones.
+   */
   const searchFoods = async (query) => {
     if (!results) return;
 
@@ -748,12 +923,14 @@ function addIngredientRow(initial = {}, containerOrSelector = "#ingredientRows")
 
   let searchTimer;
   if (searchInput) {
+    // On focus, immediately show results for current text.
     searchInput.addEventListener("focus", () => {
       if ((searchInput.value || "").trim().length >= USDA_SEARCH_MIN_LENGTH) {
         searchFoods(searchInput.value || "");
       }
     });
 
+    // Debounced USDA food search while typing.
     searchInput.addEventListener("input", () => {
       if (row.dataset.fdcId && (searchInput.value || "").trim() !== row.dataset.foodName) {
         clearSelection();
@@ -763,6 +940,7 @@ function addIngredientRow(initial = {}, containerOrSelector = "#ingredientRows")
       searchTimer = setTimeout(() => searchFoods(searchInput.value || ""), 250);
     });
 
+    // Prevent Enter from submitting the outer recipe form while searching.
     searchInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -770,12 +948,14 @@ function addIngredientRow(initial = {}, containerOrSelector = "#ingredientRows")
     });
   }
 
+  // Track that the amount field has been edited.
   if (amountInput) {
     amountInput.addEventListener("input", () => {
       amountInput.dataset.dirty = "true";
     });
   }
 
+  // Remove the row, unless it is the last remaining row, in which case just clear it.
   if (removeBtn) {
     removeBtn.addEventListener("click", () => {
       const rows = container.querySelectorAll(".ingredient-row");
@@ -795,6 +975,9 @@ function addIngredientRow(initial = {}, containerOrSelector = "#ingredientRows")
   return row;
 }
 
+/**
+ * Clears a single ingredient row without removing it from the DOM.
+ */
 function clearIngredientRow(row) {
   const searchInput = row.querySelector(".ingredient-search");
   const amountInput = row.querySelector(".ingredient-amount");
@@ -815,9 +998,12 @@ function clearIngredientRow(row) {
   delete row.dataset.caloriesPer100g;
 }
 
-function collectIngredientRows(containerOrSelector = "#ingredientRows") {
-  const container = resolveIngredientRowsContainer(containerOrSelector);
-  const rows = container ? container.querySelectorAll(".ingredient-row") : [];
+/**
+ * Validates and collects ingredient rows into the backend payload format.
+ * Skips completely empty rows, but rejects partially filled invalid rows.
+ */
+function collectIngredientRows() {
+  const rows = document.querySelectorAll("#ingredientRows .ingredient-row");
   const payload = [];
 
   for (const [index, row] of Array.from(rows).entries()) {
@@ -830,6 +1016,7 @@ function collectIngredientRows(containerOrSelector = "#ingredientRows") {
     const hasFood = Boolean(foodId);
     const hasQuantity = Number.isFinite(quantity) && quantity > 0;
 
+    // Ignore rows that are truly blank.
     if (!hasFood && !hasQuantity && !foodName && !searchText && (!amountInput || amountInput.value === "")) {
       continue;
     }
@@ -857,6 +1044,9 @@ function collectIngredientRows(containerOrSelector = "#ingredientRows") {
   return { ok: true, rows: payload };
 }
 
+/**
+ * Clears all recipe form inputs and resets the ingredient section.
+ */
 function resetRecipeForm() {
   const titleInput = document.getElementById("titleInput");
   const descInput = document.getElementById("descInput");
